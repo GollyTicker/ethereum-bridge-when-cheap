@@ -5,7 +5,7 @@ Liabilities and warranties excluded.
 ---
 
 
-# Bridge when Cheap
+# 🌈 Bridge When Cheap 💸
 
 Bridge-when-cheap (BWC) is a simple website to bridge funds from an L2 supported by the [HOP Bridge](https://hop.exchange) to the 
 Ethereum mainnet, when the gas price is low on mainnet.
@@ -17,7 +17,7 @@ However, it's inconvinient to wake up at uncommon times ust to submit a transact
 
 Bridge-when-cheap (BWC) allows you to submit a signed transaction to bridge your funds together with a desired
 L1 gas price `p` (gwei). BWC keeps the signed transaction and *when the L1 gas price reaches `p`*,
-BWC publishes it into the Hop bridge. This moves your funds are L1 at a low price.
+BWC publishes it into the Hop bridge. This moves your funds when the L1 destination gas fees are low - saving you precious 💸.
 
 BWC allows you to save transaction costs if you are willing to wait for a delayed bridging.
 
