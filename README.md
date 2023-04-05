@@ -7,7 +7,7 @@ Liabilities and warranties excluded.
 
 # Bridge when Cheap
 
-Bridge-when-cheap (BWC) is a simple website to bridge funds from an L2 supported by the [HOP Bridge](hop.exchange/) to the 
+Bridge-when-cheap (BWC) is a simple website to bridge funds from an L2 supported by the [HOP Bridge](https://hop.exchange) to the 
 Ethereum mainnet, when the gas price is low on mainnet.
 
 ## Why?
