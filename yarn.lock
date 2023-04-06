@@ -1739,20 +1739,20 @@
     "@ethersproject/properties" "^5.7.0"
     "@ethersproject/strings" "^5.7.0"
 
-"@hop-protocol/core@0.0.1-beta.136":
-  "integrity" "sha512-Cg8CIaUOJiuaR5dgGm8HuHUVvyrOQ/KbyHvUjxkwp71vzhJJS4QIDQ+XNxaWBLeLtF8bAY1sVKZFXO/aqnuuZA=="
-  "resolved" "https://registry.npmjs.org/@hop-protocol/core/-/core-0.0.1-beta.136.tgz"
-  "version" "0.0.1-beta.136"
+"@hop-protocol/core@0.0.1-beta.118":
+  "integrity" "sha512-3zuAYVeaG1yHTCsvCnp73fsfJDFWrBztHSxDZewtmEUbDQPACXp9xgeu1+xE1kJRzFsE8LQk6E6ISyo3qJ9dnQ=="
+  "resolved" "https://registry.npmjs.org/@hop-protocol/core/-/core-0.0.1-beta.118.tgz"
+  "version" "0.0.1-beta.118"
   dependencies:
     "ethers" "5.7.1"
 
-"@hop-protocol/sdk@0.0.1-beta.466":
-  "integrity" "sha512-yPERdIQCHT434YFrMzj7jo87iGiKl1FUAarQqizQsr6xCH5Tsk3aQKm6YTEAYlapOKPiUBCDLPmKzmh6ZM18PA=="
-  "resolved" "https://registry.npmjs.org/@hop-protocol/sdk/-/sdk-0.0.1-beta.466.tgz"
-  "version" "0.0.1-beta.466"
+"@hop-protocol/sdk@0.0.1-beta.427":
+  "integrity" "sha512-iGZGlXnOy/XSLxyOzR9yC7URiWdRGcwIxGY203Mgn2njPC0fCNnbCCWTCQtewKFm8kWEIWulq2nKpLVHkDuyDA=="
+  "resolved" "https://registry.npmjs.org/@hop-protocol/sdk/-/sdk-0.0.1-beta.427.tgz"
+  "version" "0.0.1-beta.427"
   dependencies:
     "@eth-optimism/contracts" "0.5.2"
-    "@hop-protocol/core" "0.0.1-beta.136"
+    "@hop-protocol/core" "0.0.1-beta.118"
     "@maticnetwork/maticjs" "3.4.0-beta.0"
     "dotenv" "8.6.0"
     "ethereum-block-by-date" "^1.4.6"
