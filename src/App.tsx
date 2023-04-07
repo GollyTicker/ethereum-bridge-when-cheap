@@ -9,13 +9,14 @@ import Alert from '@mui/material/Alert'
 import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
 import { providers } from 'ethers'
-import { formatEther } from 'ethers/lib/utils'
+import { formatEther, formatUnits, parseUnits } from 'ethers/lib/utils'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
-import { Hop } from '@hop-protocol/sdk'
+import { Hop, Chain } from '@hop-protocol/sdk'
 import './App.css'
+import { Checkbox } from '@mui/material'
 
 function TokenDropdown (props: any) {
   const { label, tokens, value, handleChange } = props
@@ -61,12 +62,37 @@ function ChainDropdown (props: any) {
   )
 }
 
+type GasFn = providers.Provider['getGasPrice']
+type MChain = Chain & { provider: providers.Provider & {orgGetGasPrice: GasFn; futureGetGasPrice: GasFn;} }
+
+function wrapToFutureChain (curr: Chain, futureChain: boolean): Chain {
+  if (curr.chainId !== 1 || curr.provider === null) {
+    return curr
+  }
+
+  const newChain: MChain = curr as any
+
+  if (!newChain.provider.futureGetGasPrice) {
+    console.log('first time init chain')
+    newChain.provider.orgGetGasPrice = newChain.provider.getGasPrice
+    newChain.provider.futureGetGasPrice = async function () {
+      return parseUnits('15', 'gwei')
+    }
+  }
+
+  console.log('Setting gas price to future?', futureChain)
+  newChain.provider.getGasPrice = futureChain ? newChain.provider.futureGetGasPrice : newChain.provider.orgGetGasPrice
+
+  return newChain
+}
+
 function App () {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [address, setAddress] = useState('')
   const [nativeTokenBalance, setNativeTokenBalance] = useState<any>(null)
   const [signer, setSigner] = useState<any>(null)
+  const [futureChain, setFutureChain] = useState<boolean>(false)
   const [provider] = useState(() => {
     try {
       return new providers.Web3Provider((window as any).ethereum, 'any')
@@ -74,21 +100,22 @@ function App () {
       setError(err.message)
     }
   })
-  const [tokenSymbol, setTokenSymbol] = useState('USDC')
-  const [fromChain, setFromChain] = useState('optimism')
-  const [toChain, setToChain] = useState('arbitrum')
-  const [amount, setAmount] = useState('')
+  const [tokenSymbol, setTokenSymbol] = useState('DAI')
+  const [fromChain, setFromChain] = useState('arbitrum')
+  const [toChain, setToChain] = useState('ethereum')
+  const [amount, setAmount] = useState('100')
   const [recipient, setRecipient] = useState('')
   const [estimate, setEstimate] = useState<any>(null)
   const [needsApproval, setNeedsApproval] = useState(false)
   const [tokenBalance, setTokenBalance] = useState<any>(null)
+  const [supportedChains, setSupportedChains] = useState<Chain[]>([])
   const bridge = useMemo(() => {
     const hop = new Hop('mainnet', signer)
     const bridge = hop.bridge(tokenSymbol)
     return bridge
   }, [tokenSymbol, signer])
 
-  const supportedChains = useMemo(() => {
+  const _supportedChains = useMemo(() => {
     const _chains = bridge.getSupportedChains()
     return _chains.map((chainSlug: string) => bridge.toChainModel(chainSlug))
   }, [bridge])
@@ -198,6 +225,10 @@ function App () {
   }
 
   useEffect(() => {
+    setSupportedChains(_supportedChains.map(chain => wrapToFutureChain(chain, futureChain)))
+  }, [_supportedChains, futureChain])
+
+  useEffect(() => {
     async function update () {
       try {
         setSuccess('')
@@ -206,12 +237,23 @@ function App () {
         const amountBn = bridge.parseUnits(amount)
         const _estimate = await bridge.getSendData(amountBn, fromChain, toChain)
         setEstimate(_estimate)
+        for (const chain of supportedChains) {
+          if (chain.chainId === 1 && chain.provider) {
+            chain
+              .provider
+              .getGasPrice()
+              .then(price => {
+                console.log('using gas price: ', formatUnits(price, 'gwei'), 'gwei.')
+              })
+              .catch(console.warn)
+          }
+        }
       } catch (err: any) {
         setError(err.message)
       }
     }
     update().catch(console.error)
-  }, [bridge, fromChain, toChain, amount])
+  }, [bridge, fromChain, toChain, amount, supportedChains])
 
   async function handleApprove (event: any) {
     event.preventDefault()
@@ -352,6 +394,14 @@ main().catch(console.error)
                 <Box mb={4}>
                   <TextField fullWidth label="Recipient (optional)" value={recipient} onChange={(event: any) => {
                     setRecipient(event.target.value)
+                  }} />
+                </Box>
+                <Box mb={4}>
+                  <p>
+                    Use future price
+                  </p>
+                  <Checkbox checked={futureChain} onChange={(event: any) => {
+                    setFutureChain(event.target.checked)
                   }} />
                 </Box>
                 <Box mb={4}>
