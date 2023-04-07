@@ -2,6 +2,11 @@ import sys
 import time
 import json
 
+# Running this requires the quicknode RPC URL with
+# its built in API "key" as well as
+# the prepopulated/empty "data/data.json" file.
+# Empty means "{}".
+
 from web3 import Web3
 
 w = Web3(Web3.HTTPProvider(sys.argv[1]))
