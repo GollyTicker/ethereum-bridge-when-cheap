@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useInterval } from 'react-use'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { tomorrow as theme } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import LoadingButton from '@mui/lab/LoadingButton'
 import Alert from '@mui/material/Alert'
 import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
-import { providers } from 'ethers'
+import { BigNumber, providers } from 'ethers'
 import { formatEther, formatUnits, parseUnits } from 'ethers/lib/utils'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
@@ -41,7 +39,7 @@ function TokenDropdown (props: any) {
 }
 
 function ChainDropdown (props: any) {
-  const { label, chains, value, handleChange } = props
+  const { label, chains, value, handleChange, readOnly } = props
   return (
     <FormControl fullWidth>
       <InputLabel id="select-label">{label}</InputLabel>
@@ -51,6 +49,7 @@ function ChainDropdown (props: any) {
         value={value}
         label={label}
         onChange={handleChange}
+        readOnly={readOnly ?? false}
       >
         {chains?.map((chain: any, i: number) => {
           return (
@@ -65,7 +64,7 @@ function ChainDropdown (props: any) {
 type GasFn = providers.Provider['getGasPrice']
 type MChain = Chain & { provider: providers.Provider & {orgGetGasPrice: GasFn; futureGetGasPrice: GasFn;} }
 
-function wrapToFutureChain (curr: Chain, futureChain: boolean): Chain {
+function wrapToFutureChain (curr: Chain, futureChain: boolean, wantedGasPrice: BigNumber): Chain {
   if (curr.chainId !== 1 || curr.provider === null) {
     return curr
   }
@@ -75,9 +74,7 @@ function wrapToFutureChain (curr: Chain, futureChain: boolean): Chain {
   if (!newChain.provider.futureGetGasPrice) {
     console.log('first time init chain')
     newChain.provider.orgGetGasPrice = newChain.provider.getGasPrice
-    newChain.provider.futureGetGasPrice = async function () {
-      return parseUnits('15', 'gwei')
-    }
+    newChain.provider.futureGetGasPrice = async () => wantedGasPrice
   }
 
   console.log('Setting gas price to future?', futureChain)
@@ -93,6 +90,8 @@ function App () {
   const [nativeTokenBalance, setNativeTokenBalance] = useState<any>(null)
   const [signer, setSigner] = useState<any>(null)
   const [futureChain, setFutureChain] = useState<boolean>(false)
+  const [wantedGasPriceString, setWantedGasPriceString] = useState('15')
+  const [wantedGasPrice, setWantedGasPrice] = useState(parseUnits(wantedGasPriceString, 'gwei'))
   const [provider] = useState(() => {
     try {
       return new providers.Web3Provider((window as any).ethereum, 'any')
@@ -102,9 +101,9 @@ function App () {
   })
   const [tokenSymbol, setTokenSymbol] = useState('DAI')
   const [fromChain, setFromChain] = useState('arbitrum')
-  const [toChain, setToChain] = useState('ethereum')
+  const [toChain] = useState('ethereum')
   const [amount, setAmount] = useState('100')
-  const [recipient, setRecipient] = useState('')
+  const [recipient] = useState('')
   const [estimate, setEstimate] = useState<any>(null)
   const [needsApproval, setNeedsApproval] = useState(false)
   const [tokenBalance, setTokenBalance] = useState<any>(null)
@@ -173,6 +172,14 @@ function App () {
   useInterval(updateTokenBalance, 5 * 1000)
 
   useEffect(() => {
+    (async () => {
+      const parsedWantedGasPrice = parseUnits(wantedGasPriceString, 'gwei')
+      setWantedGasPrice(parsedWantedGasPrice)
+    })()
+      .catch(console.error)
+  }, [wantedGasPriceString])
+
+  useEffect(() => {
     async function update () {
       if (signer) {
         const address = await signer?.getAddress()
@@ -225,8 +232,8 @@ function App () {
   }
 
   useEffect(() => {
-    setSupportedChains(_supportedChains.map(chain => wrapToFutureChain(chain, futureChain)))
-  }, [_supportedChains, futureChain])
+    setSupportedChains(_supportedChains.map(chain => wrapToFutureChain(chain, futureChain, wantedGasPrice)))
+  }, [_supportedChains, futureChain, wantedGasPrice])
 
   useEffect(() => {
     async function update () {
@@ -307,42 +314,18 @@ function App () {
   const estimatedReceivedFormatted = estimate && amount ? `${bridge.formatUnits(estimate.estimatedReceived).toFixed(4)} ${tokenSymbol}` : '-'
   const sendEnabled = isConnected && estimate && amount && !needsApproval
   const sendSummary = `Send ${amount} ${tokenSymbol} ${fromChain} → ${toChain}`
-  const codeSnippet = useMemo(() => {
-    let amountString = ''
-    try {
-      amountString = bridge.parseUnits(amount).toString()
-    } catch (err: any) { }
-    return `
-import { Hop } from '@hop-protocol/sdk'
-import { providers } from 'ethers'
-
-function main() {
-  const provider = new providers.Web3Provider(window.ethereum, 'any')
-  const signer = provider.getSigner()
-  const hop = new Hop('mainnet', signer)
-  const bridge = hop.bridge('${tokenSymbol}')
-  const { totalFee, estimatedReceived } = await bridge.getSendData('${amountString}', '${fromChain}', '${toChain}')
-  const needsApproval = await bridge.needsApproval('${amountString}', '${fromChain}')
-  if (needsApproval) {
-    const tx = await bridge.sendApproval('${amountString}', '${fromChain}', '${toChain}')
-    await tx.wait()
-  }
-  const tx = await bridge.send('${amountString}', '${fromChain}', '${toChain}', {
-    ${fromChain === 'ethereum' ? 'relayerFee' : 'bonderFee'}: totalFee${recipient ? `,\n\trecipient: '${recipient}'` : ''}
-  })
-  console.log(tx.hash)
-}
-
-main().catch(console.error)
-  `.trim()
-  }, [bridge, tokenSymbol, fromChain, toChain, amount, recipient])
 
   return (
     <Box>
       <Box p={4} m="0 auto" display="flex" flexDirection="column" justifyContent="center" alignItems="center">
-        <Box mb={4}>
-          <Typography variant="h4">
-            Hop SDK Demo
+        <Box mb={3}>
+          <Typography variant="h3">
+            🌈 Bridge When Cheap 💸
+          </Typography>
+        </Box>
+        <Box mb={3}>
+          <Typography variant="h5">
+            ⚠️ Experimental. Use at your own risk! ⚠️
           </Typography>
         </Box>
         {!isConnected && (
@@ -353,13 +336,13 @@ main().catch(console.error)
         {isConnected && (
           <Box>
             <Box display="flex" flexDirection="column" alignItems="center">
-              <Box mb={2}>
+              <Box mb={1}>
                 <Button onClick={handleDisconnect} variant="contained">Disconnect</Button>
               </Box>
               <Box mb={1}>
                 Account: {address}
               </Box>
-              <Box mb={4}>
+              <Box mb={1}>
                 <Box mb={1}>ETH: {nativeTokenBalanceFormatted}</Box>
                 <Box mb={1}>{tokenSymbol}: {tokenBalanceFormatted}</Box>
               </Box>
@@ -382,27 +365,28 @@ main().catch(console.error)
                   }} />
                 </Box>
                 <Box mb={2}>
-                  <ChainDropdown label="To Chain" chains={supportedChains} value={toChain} handleChange={(event: any) => {
-                    setToChain(event.target.value)
-                  }} />
+                  To Chain: {toChain}
                 </Box>
                 <Box mb={2}>
                   <TextField fullWidth label="Amount" value={amount} onChange={(event: any) => {
                     setAmount(event.target.value)
                   }} />
                 </Box>
-                <Box mb={4}>
+                {/*
+                <Box mb={2}>
                   <TextField fullWidth label="Recipient (optional)" value={recipient} onChange={(event: any) => {
                     setRecipient(event.target.value)
                   }} />
                 </Box>
-                <Box mb={4}>
-                  <p>
-                    Use future price
-                  </p>
+                */}
+                <Box mb={2}>
                   <Checkbox checked={futureChain} onChange={(event: any) => {
                     setFutureChain(event.target.checked)
                   }} />
+                  use wanted gas price of
+                  <TextField style={{ marginLeft: '1em' }} label="wantedGasPrice" value={wantedGasPriceString} onChange={(event: any) => {
+                    setWantedGasPriceString(event.target.value)
+                  }}/>
                 </Box>
                 <Box mb={4}>
                   <Box mb={1}>
@@ -415,31 +399,22 @@ main().catch(console.error)
                     Estimated Received: <strong>{estimatedReceivedFormatted}</strong>
                   </Box>
                 </Box>
-                <Box mb={4}>
+                <Box mb={2}>
                   <LoadingButton disabled={!needsApproval} onClick={handleApprove} variant="contained">Approve</LoadingButton>
                 </Box>
-                <Box mb={4}>
+                <Box mb={2}>
                   <LoadingButton disabled={!sendEnabled} onClick={handleSend} variant="contained">Send</LoadingButton>
                 </Box>
                 {!!error && (
-                  <Box mb={4} style={{ maxWidth: '400px', wordBreak: 'break-word' }}>
+                  <Box mb={2} style={{ maxWidth: '400px', wordBreak: 'break-word' }}>
                     <Alert severity="error">{error}</Alert>
                   </Box>
                 )}
                 {!!success && (
-                  <Box mb={4}>
+                  <Box mb={2}>
                     <Alert severity="success">{success}</Alert>
                   </Box>
                 )}
-              </Box>
-              <Box p={4}>
-                <SyntaxHighlighter
-                  language="javascript"
-                  style={theme}
-                  showLineNumbers={true}
-                >
-                  {codeSnippet}
-                </SyntaxHighlighter>
               </Box>
             </Box>
           </Box>
