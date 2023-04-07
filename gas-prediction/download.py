@@ -1,4 +1,6 @@
 import sys
+import time
+import json
 
 from web3 import Web3
 
@@ -9,10 +11,45 @@ if not w.is_connected():
 
 print("Connected to RPC!")
 
-print("Latest block info:")
-block = w.eth.get_block('latest')
+data = {}
+data_file = "data/data.json"
+def load_data():
+  with open(data_file, "r") as f:
+    global data
+    data = json.load(f)
 
-print("Blocknr", block.number)
-print("block base gas fee", block.baseFeePerGas)
-print("timestamp", block.timestamp)
+load_data()
+
+print("Starting with latest block")
+print("Ctrl+C to exit.")
+
+block = w.eth.get_block('latest')
+skipped = 0
+
+while True:
+  blockNrStr = str(block.number)
+  if blockNrStr in data:
+    skipped = skipped + 1
+    block = w.eth.get_block(block.number - 1)
+    continue
+  
+  if skipped > 0:
+    print("skipped",skipped,"already populated blocks")
+    skipped = 0
+
+  gasFeeGwei = block.baseFeePerGas // 1e9
+  data[blockNrStr] = {
+    "fee": gasFeeGwei,
+    "t": block.timestamp
+  }
+  n = len(data)
+  print(n,"| block:", block.number, block.timestamp, gasFeeGwei)
+
+  time.sleep(0.25)
+  block = w.eth.get_block(block.number - 1)
+
+  if n % 10 == 0:
+    with open(data_file, "w") as f:
+      json.dump(data, f, indent=True)
+    print("Saved progress.")
 
