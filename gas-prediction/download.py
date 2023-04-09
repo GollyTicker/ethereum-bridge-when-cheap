@@ -53,7 +53,7 @@ while True:
   time.sleep(0.25)
   block = w.eth.get_block(block.number - 1)
 
-  if n % 10 == 0:
+  if n % 25 == 0:
     with open(data_file, "w") as f:
       json.dump(data, f, indent=True)
     print("Saved progress.")
