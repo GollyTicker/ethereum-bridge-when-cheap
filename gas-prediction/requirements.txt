@@ -3,3 +3,5 @@ numpy
 skforecast
 matplotlib
 seaborn
+pyaf
+
