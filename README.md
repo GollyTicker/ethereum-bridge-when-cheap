@@ -11,6 +11,15 @@ Liabilities and warranties excluded.
 Bridge-when-cheap (BWC) is a simple website to bridge funds from an L2 supported by the [HOP Bridge](https://hop.exchange) to the 
 Ethereum mainnet, when the gas price is low on mainnet.
 
+**Note:** The idea with pre-signing the transaction won't work with MetaMask :/ The RPC method [eth_signTransaction](https://ethereum.github.io/execution-apis/api-documentation) isn [not supported by MetaMask](https://github.com/MetaMask/metamask-extension/issues/7644) due to [security and complexity concerns](https://github.com/MetaMask/metamask-extension/issues/3475).
+
+It seems that the only way to offer such a service is to actually *write a smart contract that sends the funds on
+behalf of the owners when gas is low.* This smart contract would
+* be deployed on multiple L2s
+* store the tuples of (source addr, destination addr, token, value, bonder fee and L1 gas price wants) for each request
+* execute the above requests, when the gas price wants is reached
+* allow the original users to withdraw stored funds if they haven't yet been sent to L1
+
 ## Why?
 
 If you want to bridge funds from L2 to L1, then its best to execute such a bridge, when the L1 gas price is low.
