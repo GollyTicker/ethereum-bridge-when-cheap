@@ -11,6 +11,8 @@ struct BridgeRequest {
     uint wantedL1GasPrice;
     // todo. need more arguments here to be able to call hop's L2_AMMWrapper's swapAndSend
     // todo. support tokens and not only native ether
+    // todo. Ideally, we want to allow a specific minAmountOut, so that the users funds are not being eaten away.
+    //       But for that, we'll need some satistics on how much lower the actual bonder fee is when swaps are actually executed.
 }
 
 /// @custom:security-contact bridge-when-cheap@gmail.com
