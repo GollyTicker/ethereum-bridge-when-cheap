@@ -35,7 +35,12 @@ while True:
   blockNrStr = str(block.number)
   if blockNrStr in data:
     skipped = skipped + 1
-    block = w.eth.get_block(block.number - 1)
+    try:
+      block = w.eth.get_block(block.number - 1)
+    except Exception as e:
+      print("Exception: ", e)
+      print("Retrying after 1m.")
+      time.sleep(60)
     continue
   
   if skipped > 0:
