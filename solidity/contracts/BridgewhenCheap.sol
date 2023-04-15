@@ -23,6 +23,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
 
     // address of the deloyed hop bridge to interact with to bridge funds.
     address l2HopBridgeAmmWrapper;
+    // goerli arbitrum: 0xa832293f2DCe2f092182F17dd873ae06AD5fDbaF
 
     // For each requestor, it stores a struct with the request details for the briding.
     mapping(address => BridgeRequest) requests;
