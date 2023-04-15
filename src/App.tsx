@@ -109,7 +109,7 @@ function App () {
   const [tokenBalance, setTokenBalance] = useState<any>(null)
   const [supportedChains, setSupportedChains] = useState<Chain[]>([])
   const bridge = useMemo(() => {
-    const hop = new Hop('mainnet', signer)
+    const hop = new Hop('goerli', signer)
     const bridge = hop.bridge(tokenSymbol)
     return bridge
   }, [tokenSymbol, signer])
