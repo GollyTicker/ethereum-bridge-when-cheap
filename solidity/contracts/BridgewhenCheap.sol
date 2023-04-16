@@ -125,7 +125,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         bool success = payable(msg.sender).send(executionGasRequirement);
         require(success, "Failed to refund executor");
 
-        l2HopBridgeAmmWrapper.swapAndSend(
+        l2HopBridgeAmmWrapper.swapAndSend{ value: toBeBridgedRequest.amount }(
             1, // destination always mainnet
             toBeBridgedRequest.destination,
             toBeBridgedRequest.amount,
