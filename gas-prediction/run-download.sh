@@ -2,4 +2,4 @@
 
 ENDPOINT="$(cat .endpoint)"
 
-python3 download.py "$ENDPOINT"
+python3 -u download.py "$ENDPOINT"
