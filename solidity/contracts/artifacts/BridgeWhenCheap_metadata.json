@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.18+commit.87f61d96"
+		"version": "0.8.19+commit.7dd6d404"
 	},
 	"language": "Solidity",
 	"output": {
@@ -13,7 +13,7 @@
 						"type": "uint256"
 					},
 					{
-						"internalType": "address",
+						"internalType": "contract L2_AmmWrapper",
 						"name": "_l2HopBridgeAmmWrapper",
 						"type": "address"
 					}
@@ -51,6 +51,11 @@
 						"internalType": "uint256",
 						"name": "wantedL1GasPrice",
 						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amountOutMin",
+						"type": "uint256"
 					}
 				],
 				"name": "deposit",
@@ -64,11 +69,78 @@
 						"internalType": "address",
 						"name": "requestor",
 						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "bonderFee",
+						"type": "uint256"
+					},
+					{
+						"components": [
+							{
+								"internalType": "uint8",
+								"name": "tokenIndex",
+								"type": "uint8"
+							},
+							{
+								"internalType": "uint256",
+								"name": "amountOutMin",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "deadline",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct SwapData",
+						"name": "swapData",
+						"type": "tuple"
+					},
+					{
+						"components": [
+							{
+								"internalType": "uint8",
+								"name": "tokenIndex",
+								"type": "uint8"
+							},
+							{
+								"internalType": "uint256",
+								"name": "amountOutMin",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "deadline",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct SwapData",
+						"name": "destinationSwapData",
+						"type": "tuple"
+					},
+					{
+						"internalType": "address",
+						"name": "bonder",
+						"type": "address"
 					}
 				],
 				"name": "executeRequest",
 				"outputs": [],
 				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "l2HopBridgeAmmWrapper",
+				"outputs": [
+					{
+						"internalType": "contract L2_AmmWrapper",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
 				"type": "function"
 			},
 			{
@@ -103,6 +175,11 @@
 							{
 								"internalType": "uint256",
 								"name": "amount",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "amountOutMin",
 								"type": "uint256"
 							},
 							{
@@ -189,7 +266,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/BridgewhenCheap.sol": "BridgeWhenCheap"
+			"solidity/contracts/BridgewhenCheap.sol": "BridgeWhenCheap"
 		},
 		"evmVersion": "paris",
 		"libraries": {},
@@ -227,12 +304,12 @@
 				"dweb:/ipfs/QmRK2Y5Yc6BK7tGKkgsgn3aJEQGi5aakeSPZvS65PV8Xp3"
 			]
 		},
-		"contracts/BridgewhenCheap.sol": {
-			"keccak256": "0x677f3696ee174d555632e0d106b7efd5720128a932c77ff58ac5ac4294f9786a",
+		"solidity/contracts/BridgewhenCheap.sol": {
+			"keccak256": "0xb5c4edfc89b462021ab024a7e3d8f75bc4abac822de3ac175ed6a98803d1a9a3",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://9f032b1de2062c9e623b9140dcb63b01477367a2bbfe09011f0a3d81f7102e58",
-				"dweb:/ipfs/Qmd4vK5s6TYzfyou4J5PoUXeCiRuUQtVKHsSfBRXv879Qf"
+				"bzz-raw://f2b4ec0117e8fee384b32af814cf30481d31881a07da3d6bbe78b9c317948e27",
+				"dweb:/ipfs/QmUgwd7YCxcscEp1s9qUSSGoeTsXtYhXjCb6KBhWTEYxuz"
 			]
 		}
 	},
