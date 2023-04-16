@@ -245,6 +245,8 @@ function App () {
         const _estimate = await bridge.getSendData(amountBn, fromChain, toChain)
         setEstimate(_estimate)
         console.log('Estimation:', JSON.stringify(estimate, null, 2))
+        const txData = await bridge.populateSendTx(amountBn, fromChain, toChain, undefined /* min amount comes here */)
+        console.log('tx data:', JSON.stringify(txData, null, 2))
         for (const chain of supportedChains) {
           if (chain.chainId === 1 && chain.provider) {
             chain
