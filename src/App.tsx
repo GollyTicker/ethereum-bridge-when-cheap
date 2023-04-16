@@ -109,7 +109,7 @@ function App () {
   const [tokenBalance, setTokenBalance] = useState<any>(null)
   const [supportedChains, setSupportedChains] = useState<Chain[]>([])
   const bridge = useMemo(() => {
-    const hop = new Hop('goerli', signer)
+    const hop = new Hop('mainnet', signer)
     const bridge = hop.bridge(tokenSymbol)
     return bridge
   }, [tokenSymbol, signer])
@@ -244,6 +244,7 @@ function App () {
         const amountBn = bridge.parseUnits(amount)
         const _estimate = await bridge.getSendData(amountBn, fromChain, toChain)
         setEstimate(_estimate)
+        console.log('Estimation:', JSON.stringify(estimate, null, 2))
         for (const chain of supportedChains) {
           if (chain.chainId === 1 && chain.provider) {
             chain
