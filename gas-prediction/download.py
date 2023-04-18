@@ -25,16 +25,21 @@ def load_data():
 
 load_data()
 
-print("Starting with latest block")
 print("Ctrl+C to exit.")
 
-block = w.eth.get_block('latest')
+startWith = sys.argv[2]
+print("Starting with block:", startWith)
+if startWith != "latest":
+  startWith = int(startWith)
+block = w.eth.get_block(startWith)
 skipped = 0
 
 while True:
   blockNrStr = str(block.number)
   if blockNrStr in data:
     skipped = skipped + 1
+    if skipped % 50 == 0:
+      print("Skipped", skipped, " already populated blocks.")
     try:
       block = w.eth.get_block(block.number - 1)
     except Exception as e:
@@ -44,7 +49,7 @@ while True:
     continue
   
   if skipped > 0:
-    print("skipped",skipped,"already populated blocks")
+    print("Skipped", skipped, "already populated blocks in total.")
     skipped = 0
 
   gasFeeGwei = block.baseFeePerGas // 1e9
@@ -55,7 +60,7 @@ while True:
   n = len(data)
   print(n,"| block:", block.number, block.timestamp, gasFeeGwei)
 
-  time.sleep(0.4)
+  time.sleep(0.23)
   block = w.eth.get_block(block.number - 1)
 
   if n % 100 == 0:

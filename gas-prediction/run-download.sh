@@ -2,4 +2,6 @@
 
 ENDPOINT="$(cat .endpoint)"
 
-python3 -u download.py "$ENDPOINT"
+BLOCKNR="$1"
+
+python3 -u download.py "$ENDPOINT" "$BLOCKNR"
