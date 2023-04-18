@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.19+commit.7dd6d404"
+		"version": "0.8.18+commit.87f61d96"
 	},
 	"language": "Solidity",
 	"output": {
@@ -135,11 +135,11 @@
 			]
 		},
 		"solidity/contracts/BridgewhenCheap.sol": {
-			"keccak256": "0xb5c4edfc89b462021ab024a7e3d8f75bc4abac822de3ac175ed6a98803d1a9a3",
+			"keccak256": "0xdedb922d1aec64b9540e4d24e7ddc1eb993612d85e8d773a2b7d1ba0480840f9",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://f2b4ec0117e8fee384b32af814cf30481d31881a07da3d6bbe78b9c317948e27",
-				"dweb:/ipfs/QmUgwd7YCxcscEp1s9qUSSGoeTsXtYhXjCb6KBhWTEYxuz"
+				"bzz-raw://802d1ca9ce70177010dc4a70c6e782458938f471911d8a1bc5ae806e3343efa2",
+				"dweb:/ipfs/QmQou4YBHtFHMVJBvVD6WSxrL5t1FJxyuMMKWrZm6Y6PHk"
 			]
 		}
 	},

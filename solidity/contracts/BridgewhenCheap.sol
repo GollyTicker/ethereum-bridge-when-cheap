@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
-pragma abicoder v2;
+// pragma abicoder v2;
+// ^ We don't need this explicitly here. Solidity v0.8 onwards v2 already.
+// Explicit adding of this only causes deployment issues. 
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -10,20 +12,22 @@ struct BridgeRequest {
     address destination;
     uint256 amount;
     uint256 amountOutMin; // this is calculated in the UI and shown to the user as a guarantee of what will definitely arrive.
-    // tod. we need to decrease this by our estimated amount of what changes due differing situations between submit-time and execution time.
+    // todo. we need to decrease this by our estimated amount of what changes due differing situations between submit-time and execution time.
     uint256 wantedL1GasPrice;
     // todo. support tokens and not only native ether
-}
+} 
 
 /// @custom:security-contact bridge-when-cheap@gmail.com
 contract BridgeWhenCheap is Ownable, ReentrancyGuard {
+
     // The amount of total gas required to execute a single L2 -> L1 Hop Bridge.
     // This amount is deducted from requestors to pay for the gas fees of the delayed execution.
     uint256 executionGasRequirement;
 
     // address of the deloyed hop bridge to interact with to bridge funds.
     L2_AmmWrapper public l2HopBridgeAmmWrapper;
-    // goerli arbitrum: 0xa832293f2DCe2f092182F17dd873ae06AD5fDbaF
+    // goerli arbitrum hop L2 AMM Wrapper: 0xa832293f2DCe2f092182F17dd873ae06AD5fDbaF
+    // goerli arbitrum fake l2 amm warpper: 0x1Eb7c70da731F41122f3E4fDcf7E6f723018c369
 
     // For each requestor, it stores a struct with the request details for the briding.
     mapping(address => BridgeRequest) requests;
@@ -31,7 +35,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // todo. make it possible to have multiple requests per address.
 
     constructor(
-        uint256 _executionGasRequirement, /* 0.00015 ether recommended*/
+        uint256 _executionGasRequirement, // 0.00015 ether recommended
         L2_AmmWrapper _l2HopBridgeAmmWrapper
     ) {
         executionGasRequirement = _executionGasRequirement;
@@ -106,12 +110,14 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // is executed via the Hop Bridge.
     function executeRequest(
         address requestor,
-        /* these fields are calculated just before executing the request to find these parameters via "populateSendTx" */
+        // these fields are calculated just before executing the request to find these parameters via "populateSendTx"
         uint256 bonderFee,
         SwapData memory swapData,
         SwapData memory destinationSwapData,
         address bonder
-    ) public onlyOwner nonReentrant {
+    )
+        public onlyOwner nonReentrant
+    {
         BridgeRequest memory toBeBridgedRequest = requests[requestor];
         require(isDefined(toBeBridgedRequest), "No request to process");
         require(
