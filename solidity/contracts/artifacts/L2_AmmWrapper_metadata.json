@@ -39,12 +39,12 @@
 					},
 					{
 						"internalType": "uint256",
-						"name": "destamountOutMin",
+						"name": "destAmountOutMin",
 						"type": "uint256"
 					},
 					{
 						"internalType": "uint256",
-						"name": "destdeadline",
+						"name": "destDeadline",
 						"type": "uint256"
 					}
 				],
@@ -106,11 +106,11 @@
 			]
 		},
 		"solidity/contracts/BridgewhenCheap.sol": {
-			"keccak256": "0x9a525f360467f394d0d22da79c861a598138daef0e79c1cdea95f1241f179a74",
+			"keccak256": "0x23167c920f2c9cc54326613509edd518bb0d685db13d387c881d8e3f883be982",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://f12f0592090610267df2b2bd781a588afb6bfdcde5917702b5d21b87b33fe075",
-				"dweb:/ipfs/Qmc5ueGBP1p6ArGEvECipYLs3pDaVPftnPUvHsJCcVTmri"
+				"bzz-raw://2025b41209c6f03809d8e19a5f68256a707d3f401675e80db6df1ea362835acd",
+				"dweb:/ipfs/QmbpD6qe1aD21bz3rozxQKa4eobtVRtnrb39CjqwuT3PgZ"
 			]
 		}
 	},

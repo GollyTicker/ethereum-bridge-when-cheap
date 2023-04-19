@@ -91,12 +91,12 @@
 				},
 				{
 					"internalType": "uint256",
-					"name": "destamountOutMin",
+					"name": "destAmountOutMin",
 					"type": "uint256"
 				},
 				{
 					"internalType": "uint256",
-					"name": "destdeadline",
+					"name": "destDeadline",
 					"type": "uint256"
 				}
 			],

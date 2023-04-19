@@ -15,7 +15,7 @@ struct BridgeRequest {
     // todo. we need to decrease this by our estimated amount of what changes due differing situations between submit-time and execution time.
     uint256 wantedL1GasPrice;
     // todo. support tokens and not only native ether
-} 
+}
 
 /// @custom:security-contact bridge-when-cheap@gmail.com
 contract BridgeWhenCheap is Ownable, ReentrancyGuard {
@@ -23,6 +23,15 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // The amount of total gas required to execute a single L2 -> L1 Hop Bridge.
     // This amount is deducted from requestors to pay for the gas fees of the delayed execution.
     uint256 public executionGasRequirement;
+
+    // the service fee deducted for each request.
+    // It must be larger than the executionGasRequirement.
+    // Service fee includes infrastructure hosting and development costs.
+    uint256 public serviceFee;
+
+    // the amount of service fee collected excluding execution gas fees.
+    // Only this amount is allowed to be deducted by the contract owner to pay for infrastructure/development/etc.
+    uint256 public collectedNonGasServiceFee;
 
     // address of the deloyed hop bridge to interact with to bridge funds.
     address public l2HopBridgeAmmWrapper;
@@ -66,16 +75,18 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             "Wanted L1 gas price must be strictly positive"
         );
         require(
-            msg.value >= executionGasRequirement,
+            msg.value >= serviceFee,
             "Not enough funds to pay for delayed execution"
         );
 
-        uint256 sentAmount = msg.value - executionGasRequirement; // keep some funds for ourselves for execution + service fee
+        uint256 sentAmount = msg.value - serviceFee; // keep some funds for ourselves for service (delayed execution gas, infrastructure, etc.) 
 
         require(
             sentAmount >= amountOutMin,
             "Calculated sent amount must be larger than the required minimum amount arriving at destination."
         );
+
+        collectServiceFee();
 
         requests[msg.sender] = BridgeRequest({
             source: msg.sender,
@@ -90,14 +101,13 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     function withdraw() external nonReentrant {
         BridgeRequest memory obsoleteRequest = requests[msg.sender]; // This is a copy, not a reference.
         require(isDefined(obsoleteRequest), "No request to withdraw");
+        assert(obsoleteRequest.source == msg.sender);
 
         delete requests[msg.sender];
 
-        assert(obsoleteRequest.source == msg.sender);
+        require( payable(msg.sender).send(obsoleteRequest.amount) );
 
         // todo. also recover gas fee requirement here?
-        bool success = payable(msg.sender).send(obsoleteRequest.amount);
-        require(success, "Failed to withdraw funds to msg.sender");
     }
 
     // Execute the request for the given requestor address.
@@ -107,14 +117,10 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         address requestor,
         // these fields are calculated just before executing the request to find these parameters via "populateSendTx"
         uint256 bonderFee,
-        //SwapData memory swapData,
         uint256 amountOutMin,
         uint256 deadline,
-
-        // SwapData memory destinationSwapData
-        uint256 destamountOutMin,
-        uint256 destdeadline
-        // address bonder // obsolete?
+        uint256 destAmountOutMin,
+        uint256 destDeadline
     )
         external onlyOwner nonReentrant
     {
@@ -128,8 +134,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         delete requests[requestor];
 
         // refund execution gas to caller
-        bool success = payable(msg.sender).send(executionGasRequirement);
-        require(success, "Failed to refund executor");
+        require( payable(msg.sender).send(executionGasRequirement) );
 
         L2_AmmWrapper(l2HopBridgeAmmWrapper).swapAndSend{ value: toBeBridgedRequest.amount } (
             layer1ChainId,
@@ -138,15 +143,36 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             bonderFee,
             amountOutMin,
             deadline,
-            destamountOutMin,
-            destdeadline
-            // bonder // weird. this seems to be not in the actual calldata for deployed hop contracts, but the code shows that this is there!
+            destAmountOutMin,
+            destDeadline
         );
     }
 
+    // ====================== OWNER MANAGEMENT FUNCTIONS
+
+    // allow the owner to fund, if somehow the gas prices rise a lot and gas deposits aren't enough
+    function ownerDeposit() external payable onlyOwner { }
+
+    function ownerWithdraw(uint256 amount) external onlyOwner nonReentrant {
+        require(collectedNonGasServiceFee >= amount, "Cannot withdraw more funds than the collected non gas service fees.");
+        require( payable(msg.sender).send(amount) );
+    }
+
     // If the L2 network gas prices rise for a longer duration, we can adapt the gas deposit the users have to make.
-    function setExecutionGasRequirement(uint256 amount) public onlyOwner {
+    function setExecutionGasRequirement(uint256 amount) external onlyOwner {
+        require(serviceFee >= amount, "total service fee must cover at least the xecution gas requirement");
         executionGasRequirement = amount;
+    }
+
+    function setserviceFee(uint256 amount) external onlyOwner {
+        require(amount >= executionGasRequirement, "total service fee must cover at least the xecution gas requirement");
+        serviceFee = amount;
+    }
+
+    // ====================== HELPER FUNCTIONS
+
+    function collectServiceFee() internal {
+        collectedNonGasServiceFee += serviceFee - executionGasRequirement;
     }
 
     // Returns true iff the request is not it's default zero-value.
@@ -165,13 +191,10 @@ interface L2_AmmWrapper {
         address recipient,
         uint256 amount,
         uint256 bonderFee,
-        //SwapData memory swapData,
         uint256 amountOutMin,
         uint256 deadline,
-        // SwapData memory destinationSwapData
-        uint256 destamountOutMin,
-        uint256 destdeadline
-        // ,address bonder // <- ! see above notice
+        uint256 destAmountOutMin,
+        uint256 destDeadline
     ) external payable;
 }
 
