@@ -22,35 +22,30 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
 
     // The amount of total gas required to execute a single L2 -> L1 Hop Bridge.
     // This amount is deducted from requestors to pay for the gas fees of the delayed execution.
-    uint256 executionGasRequirement;
+    uint256 public executionGasRequirement;
 
     // address of the deloyed hop bridge to interact with to bridge funds.
-    L2_AmmWrapper public l2HopBridgeAmmWrapper;
+    address public l2HopBridgeAmmWrapper;
     // goerli arbitrum hop L2 AMM Wrapper: 0xa832293f2DCe2f092182F17dd873ae06AD5fDbaF
     // goerli arbitrum fake l2 amm warpper: 0x1Eb7c70da731F41122f3E4fDcf7E6f723018c369
 
     // For each requestor, it stores a struct with the request details for the briding.
-    mapping(address => BridgeRequest) requests;
-
+    mapping(address => BridgeRequest) public requests;
     // todo. make it possible to have multiple requests per address.
+
+    uint256 public layer1ChainId; // mainnet = 1, goerli = 5
 
     constructor(
         uint256 _executionGasRequirement, // 0.00015 ether recommended
-        L2_AmmWrapper _l2HopBridgeAmmWrapper
+        address _l2HopBridgeAmmWrapper,
+        uint256 _layer1ChainId
     ) {
         executionGasRequirement = _executionGasRequirement;
         l2HopBridgeAmmWrapper = _l2HopBridgeAmmWrapper;
+        layer1ChainId = _layer1ChainId;
     }
 
-    // View any pending requests belonging to the caller
-    function pendingRequests()
-        public
-        view
-        returns (BridgeRequest memory, bool)
-    {
-        BridgeRequest memory request = requests[msg.sender]; // Copy, not reference.
-        return (request, isDefined(request));
-    }
+    // methods are external, because they'll not be called by this contract itself. (except for helper functions).
 
     // Deposit funds which will be bridged to destination via Hop Bridge
     // when the L1 gas fees are at wantedL1GasPrice or lower.
@@ -60,7 +55,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         address destination,
         uint256 wantedL1GasPrice,
         uint256 amountOutMin
-    ) public payable {
+    ) external payable {
         require(msg.sender != address(0), "Sender may not be 0 address");
         require(
             destination != address(0),
@@ -92,7 +87,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     }
 
     // Cancel any request and withdraw the funds.
-    function withdraw() public nonReentrant {
+    function withdraw() external nonReentrant {
         BridgeRequest memory obsoleteRequest = requests[msg.sender]; // This is a copy, not a reference.
         require(isDefined(obsoleteRequest), "No request to withdraw");
 
@@ -112,11 +107,16 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         address requestor,
         // these fields are calculated just before executing the request to find these parameters via "populateSendTx"
         uint256 bonderFee,
-        SwapData memory swapData,
-        SwapData memory destinationSwapData,
-        address bonder
+        //SwapData memory swapData,
+        uint256 amountOutMin,
+        uint256 deadline,
+
+        // SwapData memory destinationSwapData
+        uint256 destamountOutMin,
+        uint256 destdeadline
+        // address bonder // obsolete?
     )
-        public onlyOwner nonReentrant
+        external onlyOwner nonReentrant
     {
         BridgeRequest memory toBeBridgedRequest = requests[requestor];
         require(isDefined(toBeBridgedRequest), "No request to process");
@@ -131,14 +131,16 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         bool success = payable(msg.sender).send(executionGasRequirement);
         require(success, "Failed to refund executor");
 
-        l2HopBridgeAmmWrapper.swapAndSend{ value: toBeBridgedRequest.amount }(
-            1, // destination always mainnet
+        L2_AmmWrapper(l2HopBridgeAmmWrapper).swapAndSend{ value: toBeBridgedRequest.amount } (
+            layer1ChainId,
             toBeBridgedRequest.destination,
             toBeBridgedRequest.amount,
             bonderFee,
-            swapData,
-            destinationSwapData,
-            bonder
+            amountOutMin,
+            deadline,
+            destamountOutMin,
+            destdeadline
+            // bonder // weird. this seems to be not in the actual calldata for deployed hop contracts, but the code shows that this is there!
         );
     }
 
@@ -163,14 +165,18 @@ interface L2_AmmWrapper {
         address recipient,
         uint256 amount,
         uint256 bonderFee,
-        SwapData memory swapData,
-        SwapData memory destinationSwapData,
-        address bonder
+        //SwapData memory swapData,
+        uint256 amountOutMin,
+        uint256 deadline,
+        // SwapData memory destinationSwapData
+        uint256 destamountOutMin,
+        uint256 destdeadline
+        // ,address bonder // <- ! see above notice
     ) external payable;
 }
 
 struct SwapData {
-    uint8 tokenIndex;
+    // uint8 tokenIndex; // <- this doesn't appear in real call data. remove this???
     uint256 amountOutMin;
     uint256 deadline;
 }

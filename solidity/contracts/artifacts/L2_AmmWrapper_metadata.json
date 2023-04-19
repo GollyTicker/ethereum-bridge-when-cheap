@@ -28,53 +28,24 @@
 						"type": "uint256"
 					},
 					{
-						"components": [
-							{
-								"internalType": "uint8",
-								"name": "tokenIndex",
-								"type": "uint8"
-							},
-							{
-								"internalType": "uint256",
-								"name": "amountOutMin",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "deadline",
-								"type": "uint256"
-							}
-						],
-						"internalType": "struct SwapData",
-						"name": "swapData",
-						"type": "tuple"
+						"internalType": "uint256",
+						"name": "amountOutMin",
+						"type": "uint256"
 					},
 					{
-						"components": [
-							{
-								"internalType": "uint8",
-								"name": "tokenIndex",
-								"type": "uint8"
-							},
-							{
-								"internalType": "uint256",
-								"name": "amountOutMin",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "deadline",
-								"type": "uint256"
-							}
-						],
-						"internalType": "struct SwapData",
-						"name": "destinationSwapData",
-						"type": "tuple"
+						"internalType": "uint256",
+						"name": "deadline",
+						"type": "uint256"
 					},
 					{
-						"internalType": "address",
-						"name": "bonder",
-						"type": "address"
+						"internalType": "uint256",
+						"name": "destamountOutMin",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "destdeadline",
+						"type": "uint256"
 					}
 				],
 				"name": "swapAndSend",
@@ -135,11 +106,11 @@
 			]
 		},
 		"solidity/contracts/BridgewhenCheap.sol": {
-			"keccak256": "0xdedb922d1aec64b9540e4d24e7ddc1eb993612d85e8d773a2b7d1ba0480840f9",
+			"keccak256": "0x9a525f360467f394d0d22da79c861a598138daef0e79c1cdea95f1241f179a74",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://802d1ca9ce70177010dc4a70c6e782458938f471911d8a1bc5ae806e3343efa2",
-				"dweb:/ipfs/QmQou4YBHtFHMVJBvVD6WSxrL5t1FJxyuMMKWrZm6Y6PHk"
+				"bzz-raw://f12f0592090610267df2b2bd781a588afb6bfdcde5917702b5d21b87b33fe075",
+				"dweb:/ipfs/Qmc5ueGBP1p6ArGEvECipYLs3pDaVPftnPUvHsJCcVTmri"
 			]
 		}
 	},

@@ -13,9 +13,14 @@
 						"type": "uint256"
 					},
 					{
-						"internalType": "contract L2_AmmWrapper",
+						"internalType": "address",
 						"name": "_l2HopBridgeAmmWrapper",
 						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_layer1ChainId",
+						"type": "uint256"
 					}
 				],
 				"stateMutability": "nonpayable",
@@ -76,53 +81,24 @@
 						"type": "uint256"
 					},
 					{
-						"components": [
-							{
-								"internalType": "uint8",
-								"name": "tokenIndex",
-								"type": "uint8"
-							},
-							{
-								"internalType": "uint256",
-								"name": "amountOutMin",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "deadline",
-								"type": "uint256"
-							}
-						],
-						"internalType": "struct SwapData",
-						"name": "swapData",
-						"type": "tuple"
+						"internalType": "uint256",
+						"name": "amountOutMin",
+						"type": "uint256"
 					},
 					{
-						"components": [
-							{
-								"internalType": "uint8",
-								"name": "tokenIndex",
-								"type": "uint8"
-							},
-							{
-								"internalType": "uint256",
-								"name": "amountOutMin",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "deadline",
-								"type": "uint256"
-							}
-						],
-						"internalType": "struct SwapData",
-						"name": "destinationSwapData",
-						"type": "tuple"
+						"internalType": "uint256",
+						"name": "deadline",
+						"type": "uint256"
 					},
 					{
-						"internalType": "address",
-						"name": "bonder",
-						"type": "address"
+						"internalType": "uint256",
+						"name": "destamountOutMin",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "destdeadline",
+						"type": "uint256"
 					}
 				],
 				"name": "executeRequest",
@@ -132,12 +108,38 @@
 			},
 			{
 				"inputs": [],
+				"name": "executionGasRequirement",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
 				"name": "l2HopBridgeAmmWrapper",
 				"outputs": [
 					{
-						"internalType": "contract L2_AmmWrapper",
+						"internalType": "address",
 						"name": "",
 						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "layer1ChainId",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
 					}
 				],
 				"stateMutability": "view",
@@ -158,54 +160,48 @@
 			},
 			{
 				"inputs": [],
-				"name": "pendingRequests",
-				"outputs": [
-					{
-						"components": [
-							{
-								"internalType": "address",
-								"name": "source",
-								"type": "address"
-							},
-							{
-								"internalType": "address",
-								"name": "destination",
-								"type": "address"
-							},
-							{
-								"internalType": "uint256",
-								"name": "amount",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "amountOutMin",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "wantedL1GasPrice",
-								"type": "uint256"
-							}
-						],
-						"internalType": "struct BridgeRequest",
-						"name": "",
-						"type": "tuple"
-					},
-					{
-						"internalType": "bool",
-						"name": "",
-						"type": "bool"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [],
 				"name": "renounceOwnership",
 				"outputs": [],
 				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"name": "requests",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "source",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "destination",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amountOutMin",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "wantedL1GasPrice",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
 				"type": "function"
 			},
 			{
@@ -305,11 +301,11 @@
 			]
 		},
 		"solidity/contracts/BridgewhenCheap.sol": {
-			"keccak256": "0xdedb922d1aec64b9540e4d24e7ddc1eb993612d85e8d773a2b7d1ba0480840f9",
+			"keccak256": "0x9a525f360467f394d0d22da79c861a598138daef0e79c1cdea95f1241f179a74",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://802d1ca9ce70177010dc4a70c6e782458938f471911d8a1bc5ae806e3343efa2",
-				"dweb:/ipfs/QmQou4YBHtFHMVJBvVD6WSxrL5t1FJxyuMMKWrZm6Y6PHk"
+				"bzz-raw://f12f0592090610267df2b2bd781a588afb6bfdcde5917702b5d21b87b33fe075",
+				"dweb:/ipfs/Qmc5ueGBP1p6ArGEvECipYLs3pDaVPftnPUvHsJCcVTmri"
 			]
 		}
 	},

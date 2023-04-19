@@ -53,7 +53,7 @@
 		},
 		"gasEstimates": null,
 		"methodIdentifiers": {
-			"swapAndSend(uint256,address,uint256,uint256,(uint8,uint256,uint256),(uint8,uint256,uint256),address)": "38e981aa"
+			"swapAndSend(uint256,address,uint256,uint256,uint256,uint256,uint256,uint256)": "eea0d7b2"
 		}
 	},
 	"abi": [
@@ -80,53 +80,24 @@
 					"type": "uint256"
 				},
 				{
-					"components": [
-						{
-							"internalType": "uint8",
-							"name": "tokenIndex",
-							"type": "uint8"
-						},
-						{
-							"internalType": "uint256",
-							"name": "amountOutMin",
-							"type": "uint256"
-						},
-						{
-							"internalType": "uint256",
-							"name": "deadline",
-							"type": "uint256"
-						}
-					],
-					"internalType": "struct SwapData",
-					"name": "swapData",
-					"type": "tuple"
+					"internalType": "uint256",
+					"name": "amountOutMin",
+					"type": "uint256"
 				},
 				{
-					"components": [
-						{
-							"internalType": "uint8",
-							"name": "tokenIndex",
-							"type": "uint8"
-						},
-						{
-							"internalType": "uint256",
-							"name": "amountOutMin",
-							"type": "uint256"
-						},
-						{
-							"internalType": "uint256",
-							"name": "deadline",
-							"type": "uint256"
-						}
-					],
-					"internalType": "struct SwapData",
-					"name": "destinationSwapData",
-					"type": "tuple"
+					"internalType": "uint256",
+					"name": "deadline",
+					"type": "uint256"
 				},
 				{
-					"internalType": "address",
-					"name": "bonder",
-					"type": "address"
+					"internalType": "uint256",
+					"name": "destamountOutMin",
+					"type": "uint256"
+				},
+				{
+					"internalType": "uint256",
+					"name": "destdeadline",
+					"type": "uint256"
 				}
 			],
 			"name": "swapAndSend",
