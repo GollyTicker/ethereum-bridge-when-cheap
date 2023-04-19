@@ -1,0 +1,45 @@
+{
+  "name": "swapAndSend",
+  "params": [
+    {
+      "name": "chainId",
+      "value": "5",
+      "type": "uint256"
+    },
+    {
+      "name": "recipient",
+      "value": "0x87868fd4347e695d87981aad388574d54e92ac71",
+      "type": "address"
+    },
+    {
+      "name": "amount",
+      "value": "10000000000000000",
+      "type": "uint256"
+    },
+    {
+      "name": "bonderFee",
+      "value": "515220318864123",
+      "type": "uint256"
+    },
+    {
+      "name": "amountOutMin",
+      "value": "9736927624658528",
+      "type": "uint256"
+    },
+    {
+      "name": "deadline",
+      "value": "1682464518",
+      "type": "uint256"
+    },
+    {
+      "name": "destinationAmountOutMin",
+      "value": "0",
+      "type": "uint256"
+    },
+    {
+      "name": "destinationDeadline",
+      "value": "0",
+      "type": "uint256"
+    }
+  ]
+}
