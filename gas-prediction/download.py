@@ -18,6 +18,10 @@ print("Connected to RPC!")
 
 data = {}
 data_file = "data/data.json"
+
+# we have this block, so we can stop.
+stop_at = 16083439
+
 def load_data():
   with open(data_file, "r") as f:
     global data
@@ -25,32 +29,42 @@ def load_data():
 
 load_data()
 
+save_every = 200
+
+def save_data():
+  with open(data_file, "w") as f:
+    json.dump(data, f, indent=True)
+  print("Saved progress.")
+
 print("Ctrl+C to exit.")
 
-startWith = sys.argv[2]
+startWith = w.eth.get_block(sys.argv[2]).number
 print("Starting with block:", startWith)
-if startWith != "latest":
-  startWith = int(startWith)
-block = w.eth.get_block(startWith)
+
+blockNr = startWith
 skipped = 0
 
 while True:
-  blockNrStr = str(block.number)
+  blockNrStr = str(blockNr)
+
+  if blockNr == stop_at:
+    print("Reached beginning of already saved data.")
+    save_data()
+    print("Finished.")
+    break
+
   if blockNrStr in data:
     skipped = skipped + 1
+    blockNr = blockNr - 1
     if skipped % 50 == 0:
       print("Skipped", skipped, " already populated blocks.")
-    try:
-      block = w.eth.get_block(block.number - 1)
-    except Exception as e:
-      print("Exception: ", e)
-      print("Retrying after 1m.")
-      time.sleep(60)
     continue
-  
+
   if skipped > 0:
     print("Skipped", skipped, "already populated blocks in total.")
     skipped = 0
+
+  block = w.eth.get_block(blockNr)
 
   gasFeeGwei = block.baseFeePerGas // 1e9
   data[blockNrStr] = {
@@ -60,11 +74,9 @@ while True:
   n = len(data)
   print(n,"| block:", block.number, block.timestamp, gasFeeGwei)
 
+  if n % save_every == 0:
+    save_data()
+
   time.sleep(0.23)
-  block = w.eth.get_block(block.number - 1)
 
-  if n % 100 == 0:
-    with open(data_file, "w") as f:
-      json.dump(data, f, indent=True)
-    print("Saved progress.")
-
+  blockNr = blockNr - 1
