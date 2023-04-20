@@ -1,16 +1,14 @@
 {
-  "language":"Solidity",
-  "settings":{
-    "optimizer":{
-      "enabled":true,
-      "runs":200
+  "language": "Solidity",
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
     },
-    "outputSelection":{
-      "*":{
-        "":[
-          "ast"
-        ],
-        "*":[
+    "outputSelection": {
+      "*": {
+        "": ["ast"],
+        "*": [
           "abi",
           "metadata",
           "devdoc",
@@ -25,19 +23,14 @@
         ]
       }
     },
-    "modelChecker":{
-      "engine":"chc",
-	  "showUnproved": true,
-      "contracts":{
-        "solidity/contracts/BridgeWhenCheap.sol":[
-          "BridgeWhenCheap"
-        ]
+    "modelChecker": {
+      "engine": "chc",
+      "showUnproved": true,
+      "contracts": {
+        "solidity/contracts/BridgeWhenCheap.sol": ["BridgeWhenCheap"]
       },
-      "targets":[
-        "assert",
-		"overflow",
-		"underflow"
-      ]
+      "targets": ["assert", "underflow", "balance"],
+      "invariants": ["contract", "reentrancy"]
     }
   }
 }

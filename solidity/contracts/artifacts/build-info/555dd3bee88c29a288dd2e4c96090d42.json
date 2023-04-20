@@ -1,5 +1,5 @@
 {
-	"id": "4a8ac3b5723ffafd61100f6b13df5c40",
+	"id": "555dd3bee88c29a288dd2e4c96090d42",
 	"_format": "hh-sol-build-info-1",
 	"solcVersion": "0.8.19",
 	"solcLongVersion": "0.8.19+commit.7dd6d404",
@@ -40,8 +40,10 @@
 				},
 				"targets": [
 					"assert",
-					"overflow",
 					"underflow"
+				],
+				"invariants": [
+					"contract"
 				]
 			}
 		},
@@ -34267,32 +34269,6 @@
 			},
 			{
 				"component": "general",
-				"errorCode": "4984",
-				"formattedMessage": "Warning: CHC: Overflow (resulting value larger than 2**256 - 1) might happen here.\n   --> solidity/contracts/BridgeWhenCheap.sol:173:13:\n    |\n173 |             withdrawTokenAmount += obsoleteRequest.amount;\n    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n",
-				"message": "CHC: Overflow (resulting value larger than 2**256 - 1) might happen here.",
-				"severity": "warning",
-				"sourceLocation": {
-					"end": 7226,
-					"file": "solidity/contracts/BridgeWhenCheap.sol",
-					"start": 7181
-				},
-				"type": "Warning"
-			},
-			{
-				"component": "general",
-				"errorCode": "4984",
-				"formattedMessage": "Warning: CHC: Overflow (resulting value larger than 2**256 - 1) might happen here.\n   --> solidity/contracts/BridgeWhenCheap.sol:175:13:\n    |\n175 |             withdrawNativeEtherAmount += obsoleteRequest.amount;\n    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n",
-				"message": "CHC: Overflow (resulting value larger than 2**256 - 1) might happen here.",
-				"severity": "warning",
-				"sourceLocation": {
-					"end": 7308,
-					"file": "solidity/contracts/BridgeWhenCheap.sol",
-					"start": 7257
-				},
-				"type": "Warning"
-			},
-			{
-				"component": "general",
 				"errorCode": "3944",
 				"formattedMessage": "Warning: CHC: Underflow (resulting value less than 0) might happen here.\n   --> solidity/contracts/BridgeWhenCheap.sol:253:9:\n    |\n253 |         collectedServiceFeeExcludingGas -= amount;\n    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n",
 				"message": "CHC: Underflow (resulting value less than 0) might happen here.",
@@ -34314,19 +34290,6 @@
 					"end": 11465,
 					"file": "solidity/contracts/BridgeWhenCheap.sol",
 					"start": 11433
-				},
-				"type": "Warning"
-			},
-			{
-				"component": "general",
-				"errorCode": "4984",
-				"formattedMessage": "Warning: CHC: Overflow (resulting value larger than 2**256 - 1) might happen here.\n   --> solidity/contracts/BridgeWhenCheap.sol:292:9:\n    |\n292 |         collectedServiceFeeExcludingGas += serviceFee - l2execGasFeeDeposit;\n    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n",
-				"message": "CHC: Overflow (resulting value larger than 2**256 - 1) might happen here.",
-				"severity": "warning",
-				"sourceLocation": {
-					"end": 11465,
-					"file": "solidity/contracts/BridgeWhenCheap.sol",
-					"start": 11398
 				},
 				"type": "Warning"
 			}
