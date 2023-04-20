@@ -31,6 +31,10 @@ A server-node (run by the developer) regularly checks L1 gas prices and the appl
 
 When activity (and hence gas price) on L1 is low and the desired cheaper briding of funds is possible, the server-node will initiate the briding of the funds and they'll arrive in your specified address on L1.
 
+According to historical analysis, you save on average **7 gwei** L1 gas by delaying your request up to 24h using
+the suggested lower gas price by Bridge-When-Cheap. At **98.4%** of the blocks where you could have submitted a request in the past,
+your request would have been served within 24 hours.
+
 ## How secure and trustless is this?
 
 In the spirit of the core values of Ethereum, Bridge-When-Cheap offers you desireable guarantees:

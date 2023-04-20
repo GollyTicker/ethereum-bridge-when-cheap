@@ -9,7 +9,7 @@
 				"inputs": [
 					{
 						"internalType": "uint256",
-						"name": "_executionGasRequirement",
+						"name": "_l2execGasFeeDeposit",
 						"type": "uint256"
 					},
 					{
@@ -84,7 +84,7 @@
 			},
 			{
 				"inputs": [],
-				"name": "collectedNonGasServiceFee",
+				"name": "collectedServiceFeeExcludingGas",
 				"outputs": [
 					{
 						"internalType": "uint256",
@@ -178,7 +178,7 @@
 			},
 			{
 				"inputs": [],
-				"name": "executionGasRequirement",
+				"name": "l2execGasFeeDeposit",
 				"outputs": [
 					{
 						"internalType": "uint256",
@@ -236,13 +236,6 @@
 				"type": "function"
 			},
 			{
-				"inputs": [],
-				"name": "renounceOwnership",
-				"outputs": [],
-				"stateMutability": "nonpayable",
-				"type": "function"
-			},
-			{
 				"inputs": [
 					{
 						"internalType": "address",
@@ -255,7 +248,7 @@
 						"type": "uint256"
 					}
 				],
-				"name": "requests",
+				"name": "pendingRequests",
 				"outputs": [
 					{
 						"internalType": "address",
@@ -294,11 +287,18 @@
 					},
 					{
 						"internalType": "uint256",
-						"name": "depositedL2gasFund",
+						"name": "l2execGasFeeDeposit",
 						"type": "uint256"
 					}
 				],
 				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "renounceOwnership",
+				"outputs": [],
+				"stateMutability": "nonpayable",
 				"type": "function"
 			},
 			{
@@ -322,7 +322,7 @@
 						"type": "uint256"
 					}
 				],
-				"name": "setExecutionGasRequirement",
+				"name": "setL2execGasFeeDeposit",
 				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
@@ -438,11 +438,11 @@
 			]
 		},
 		"solidity/contracts/BridgewhenCheap.sol": {
-			"keccak256": "0xc696cde1c825fbc1fbfd1b894cefa9431ad963da4994a380c8a1fa7da8e21a0b",
+			"keccak256": "0xb9e3b8d635a676c632a8fff7ba9812957de3f238b79a8fd4dfcab977929acea8",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://23c55d7b11a1297f28638fa2233e8ef2de02e47fab249177cf377abdf499c1ec",
-				"dweb:/ipfs/QmZHF57TrxeZKZSTgmdKkBpjCNTCAdkdJK6Gew7akLugK9"
+				"bzz-raw://d5e4006ad58836a8b430647a0bff04b4b4ccf5e42c8b1a917be9f51d3100606f",
+				"dweb:/ipfs/QmSnocN3TpodhwC8KoxkHbyYLpsXc3DLZy2YSkBgt3AgMa"
 			]
 		}
 	},
