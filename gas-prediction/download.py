@@ -20,7 +20,7 @@ data = {}
 data_file = "data/data.json"
 
 # we have this block, so we can stop.
-stop_at = 16083439
+stop_at = 17090881
 
 def load_data():
   with open(data_file, "r") as f:
@@ -32,6 +32,7 @@ load_data()
 save_every = 200
 
 def save_data():
+  print("Saving.... Don't terminate!")
   with open(data_file, "w") as f:
     json.dump(data, f, indent=True)
   print("Saved progress.")
@@ -56,7 +57,7 @@ while True:
   if blockNrStr in data:
     skipped = skipped + 1
     blockNr = blockNr - 1
-    if skipped % 50 == 0:
+    if (skipped < 50 and skipped % 10 == 0) or skipped % 1000 == 0:
       print("Skipped", skipped, " already populated blocks.")
     continue
 
@@ -77,6 +78,6 @@ while True:
   if n % save_every == 0:
     save_data()
 
-  time.sleep(0.23)
+  time.sleep(0.205)
 
   blockNr = blockNr - 1
