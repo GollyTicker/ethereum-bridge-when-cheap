@@ -438,11 +438,11 @@
 			]
 		},
 		"solidity/contracts/BridgewhenCheap.sol": {
-			"keccak256": "0xb9e3b8d635a676c632a8fff7ba9812957de3f238b79a8fd4dfcab977929acea8",
+			"keccak256": "0x251472c097a27b97db4a996be4f7185fefeca88532ae286b6ee8efaa7335cd44",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://d5e4006ad58836a8b430647a0bff04b4b4ccf5e42c8b1a917be9f51d3100606f",
-				"dweb:/ipfs/QmSnocN3TpodhwC8KoxkHbyYLpsXc3DLZy2YSkBgt3AgMa"
+				"bzz-raw://18a182898c734baf0961ca949643f24155f1589236eee7b9df48ad39fda84390",
+				"dweb:/ipfs/QmWS6SjeNC2XXjaq9dsH5QacrhPP1jHDpWGtTSUwyaHBcx"
 			]
 		}
 	},

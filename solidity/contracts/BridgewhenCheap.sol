@@ -19,6 +19,9 @@ struct BridgeRequest {
     uint256 l2execGasFeeDeposit; // we also store this here, because the l2execGasFeeDeposit amount might change during the lifetime of the contract.
 }
 
+// todo. add events. What should be emitted as an event in the first place.
+// Is it sufficient to only emit on deposit, withdraw and executeReques?
+
 // todo. creat a contact email
 /// @custom:security-contact bridge-when-cheap@gmail.com
 contract BridgeWhenCheap is Ownable, ReentrancyGuard {
