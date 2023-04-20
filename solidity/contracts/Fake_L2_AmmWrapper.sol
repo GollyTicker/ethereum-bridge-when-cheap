@@ -12,16 +12,10 @@ contract Fake_L2_AmmWrapper {
         address recipient,
         uint256 amount,
         uint256 bonderFee,
-        SwapData memory swapData,
-        SwapData memory destinationSwapData,
-        address bonder
+        uint256 amountOutMin,
+        uint256 deadline,
+        uint256 destAmountOutMin,
+        uint256 destDeadline
     ) external payable {
-        
     }
-}
-
-struct SwapData {
-    uint8 tokenIndex;
-    uint256 amountOutMin;
-    uint256 deadline;
 }

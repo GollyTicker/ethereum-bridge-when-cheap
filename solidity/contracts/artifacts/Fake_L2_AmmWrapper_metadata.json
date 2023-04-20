@@ -33,53 +33,24 @@
 						"type": "uint256"
 					},
 					{
-						"components": [
-							{
-								"internalType": "uint8",
-								"name": "tokenIndex",
-								"type": "uint8"
-							},
-							{
-								"internalType": "uint256",
-								"name": "amountOutMin",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "deadline",
-								"type": "uint256"
-							}
-						],
-						"internalType": "struct SwapData",
-						"name": "swapData",
-						"type": "tuple"
+						"internalType": "uint256",
+						"name": "amountOutMin",
+						"type": "uint256"
 					},
 					{
-						"components": [
-							{
-								"internalType": "uint8",
-								"name": "tokenIndex",
-								"type": "uint8"
-							},
-							{
-								"internalType": "uint256",
-								"name": "amountOutMin",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "deadline",
-								"type": "uint256"
-							}
-						],
-						"internalType": "struct SwapData",
-						"name": "destinationSwapData",
-						"type": "tuple"
+						"internalType": "uint256",
+						"name": "deadline",
+						"type": "uint256"
 					},
 					{
-						"internalType": "address",
-						"name": "bonder",
-						"type": "address"
+						"internalType": "uint256",
+						"name": "destAmountOutMin",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "destDeadline",
+						"type": "uint256"
 					}
 				],
 				"name": "swapAndSend",
@@ -117,11 +88,11 @@
 	},
 	"sources": {
 		"solidity/contracts/Fake_L2_AmmWrapper.sol": {
-			"keccak256": "0xda3ccc0658f93f0f2ee1beb3fedea70c741ad474b25892bd62f33d249f7f8ad7",
+			"keccak256": "0xba754aec615f581adb8ce5f99dd510e28b0f79f622300a116cd8edaf6b278781",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://29a490c8a37cb067252aa9c336b60eaf60526beb5d443396590baa368cf127e3",
-				"dweb:/ipfs/QmTkQygTLcfNFZ3HiVZtgMXX5zpgbRMEotpUCPPnFtvnNh"
+				"bzz-raw://48c9e8123730497fa7bc2f39dad4dc133399d34afd368506ebfcbb1630876cd3",
+				"dweb:/ipfs/QmU2MYQy6tHBczYYf1BrvCvREKnmfyb71skRmBQ5T4AhxW"
 			]
 		}
 	},

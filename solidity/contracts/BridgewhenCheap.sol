@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
-// pragma abicoder v2;
-// ^ We don't need this explicitly here. Solidity v0.8 onwards v2 already.
-// Explicit adding of this only causes deployment issues. 
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -15,11 +13,11 @@ struct BridgeRequest {
     // todo. we need to decrease this by our estimated amount of what changes due differing situations between submit-time and execution time.
     uint256 wantedL1GasPrice;
     // todo. support tokens and not only native ether
+    uint256 depositedL2gasFund;
 }
 
 /// @custom:security-contact bridge-when-cheap@gmail.com
 contract BridgeWhenCheap is Ownable, ReentrancyGuard {
-
     // The amount of total gas required to execute a single L2 -> L1 Hop Bridge.
     // This amount is deducted from requestors to pay for the gas fees of the delayed execution.
     uint256 public executionGasRequirement;
@@ -39,20 +37,28 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // goerli arbitrum fake l2 amm warpper: 0x1Eb7c70da731F41122f3E4fDcf7E6f723018c369
 
     // For each requestor, it stores a struct with the request details for the briding.
-    mapping(address => BridgeRequest) public requests;
-    // todo. make it possible to have multiple requests per address.
+    mapping(address => mapping(uint256 => BridgeRequest)) public requests;
 
     uint256 public layer1ChainId; // mainnet = 1, goerli = 5
 
     constructor(
         uint256 _executionGasRequirement, // 0.00015 ether recommended
+        uint256 _serviceFee,
         address _l2HopBridgeAmmWrapper,
         uint256 _layer1ChainId
     ) {
         executionGasRequirement = _executionGasRequirement;
+        serviceFee = _serviceFee;
         l2HopBridgeAmmWrapper = _l2HopBridgeAmmWrapper;
         layer1ChainId = _layer1ChainId;
+        checkFeeInvariants();
     }
+
+    // constraints:
+    // changes in servicefee + exec-gas should only influence new deposits but not withdrawals of previous deposits
+    // request executions. also, checkFeeInvariants is always true before and after txs.
+    // Also, we want to make sure, that whatever happens, the deposits cannot be drained. currently, with servicefee changes
+    // this might be possible. We have that the sum of all this.balance >= sum(request[*].amount) + gasstuff
 
     // methods are external, because they'll not be called by this contract itself. (except for helper functions).
 
@@ -61,6 +67,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // The request is recorded in the smart contract and executed lateron,
     // by the owner of the contract, when the gas fees are low.
     function deposit(
+        uint256 requestId,
         address destination,
         uint256 wantedL1GasPrice,
         uint256 amountOutMin
@@ -86,28 +93,33 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             "Calculated sent amount must be larger than the required minimum amount arriving at destination."
         );
 
-        collectServiceFee();
+        require(
+            !isDefined(requests[msg.sender][requestId]),
+            "request with the same id for the requestor already exists."
+        );
 
-        requests[msg.sender] = BridgeRequest({
+        collectNonGasServiceFee();
+
+        requests[msg.sender][requestId] = BridgeRequest({
             source: msg.sender,
             destination: destination,
             amount: sentAmount,
             amountOutMin: amountOutMin,
-            wantedL1GasPrice: wantedL1GasPrice
+            wantedL1GasPrice: wantedL1GasPrice,
+            depositedL2gasFund: executionGasRequirement
         });
     }
 
     // Cancel any request and withdraw the funds.
-    function withdraw() external nonReentrant {
-        BridgeRequest memory obsoleteRequest = requests[msg.sender]; // This is a copy, not a reference.
+    function withdraw(uint256 requestId) external nonReentrant {
+        BridgeRequest memory obsoleteRequest = requests[msg.sender][requestId]; // This is a copy, not a reference.
         require(isDefined(obsoleteRequest), "No request to withdraw");
         assert(obsoleteRequest.source == msg.sender);
 
-        delete requests[msg.sender];
+        uint256 withdrawAmount = obsoleteRequest.amount + obsoleteRequest.depositedL2gasFund;
+        delete requests[msg.sender][requestId];
 
-        require( payable(msg.sender).send(obsoleteRequest.amount) );
-
-        // todo. also recover gas fee requirement here?
+        require( payable(msg.sender).send(withdrawAmount) );
     }
 
     // Execute the request for the given requestor address.
@@ -115,6 +127,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // is executed via the Hop Bridge.
     function executeRequest(
         address requestor,
+        uint256 requestId,
         // these fields are calculated just before executing the request to find these parameters via "populateSendTx"
         uint256 bonderFee,
         uint256 amountOutMin,
@@ -124,17 +137,17 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     )
         external onlyOwner nonReentrant
     {
-        BridgeRequest memory toBeBridgedRequest = requests[requestor];
+        BridgeRequest memory toBeBridgedRequest = requests[requestor][requestId];
         require(isDefined(toBeBridgedRequest), "No request to process");
         require(
             toBeBridgedRequest.amount >= bonderFee,
             "Bonder fee cannot exceed amount."
         );
 
-        delete requests[requestor];
+        delete requests[requestor][requestId];
 
         // refund execution gas to caller
-        require( payable(msg.sender).send(executionGasRequirement) );
+        require( payable(msg.sender).send(toBeBridgedRequest.depositedL2gasFund) );
 
         L2_AmmWrapper(l2HopBridgeAmmWrapper).swapAndSend{ value: toBeBridgedRequest.amount } (
             layer1ChainId,
@@ -160,18 +173,22 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
 
     // If the L2 network gas prices rise for a longer duration, we can adapt the gas deposit the users have to make.
     function setExecutionGasRequirement(uint256 amount) external onlyOwner {
-        require(serviceFee >= amount, "total service fee must cover at least the xecution gas requirement");
         executionGasRequirement = amount;
+        checkFeeInvariants();
     }
 
     function setserviceFee(uint256 amount) external onlyOwner {
-        require(amount >= executionGasRequirement, "total service fee must cover at least the xecution gas requirement");
         serviceFee = amount;
+        checkFeeInvariants();
     }
 
     // ====================== HELPER FUNCTIONS
 
-    function collectServiceFee() internal {
+    function checkFeeInvariants() internal view {
+        require(serviceFee >= executionGasRequirement, "service fee must cover at least the execution gas requirement");
+    }
+
+    function collectNonGasServiceFee() internal {
         collectedNonGasServiceFee += serviceFee - executionGasRequirement;
     }
 
@@ -198,8 +215,3 @@ interface L2_AmmWrapper {
     ) external payable;
 }
 
-struct SwapData {
-    // uint8 tokenIndex; // <- this doesn't appear in real call data. remove this???
-    uint256 amountOutMin;
-    uint256 deadline;
-}
