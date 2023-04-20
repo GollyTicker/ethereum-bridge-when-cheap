@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.18+commit.87f61d96"
+		"version": "0.8.19+commit.7dd6d404"
 	},
 	"language": "Solidity",
 	"output": {
@@ -67,7 +67,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"solidity/contracts/BridgewhenCheap.sol": "HopL2AmmWrapper"
+			"solidity/contracts/BridgeWhenCheap.sol": "HopL2AmmWrapper"
 		},
 		"evmVersion": "paris",
 		"libraries": {},
@@ -75,7 +75,7 @@
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": false,
+			"enabled": true,
 			"runs": 200
 		},
 		"remappings": []
@@ -113,12 +113,12 @@
 				"dweb:/ipfs/QmRK2Y5Yc6BK7tGKkgsgn3aJEQGi5aakeSPZvS65PV8Xp3"
 			]
 		},
-		"solidity/contracts/BridgewhenCheap.sol": {
-			"keccak256": "0x251472c097a27b97db4a996be4f7185fefeca88532ae286b6ee8efaa7335cd44",
+		"solidity/contracts/BridgeWhenCheap.sol": {
+			"keccak256": "0xc648e77e97975b763815c4c70bfca3b8a623e402850b3b2c7b628af75b602e5f",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://18a182898c734baf0961ca949643f24155f1589236eee7b9df48ad39fda84390",
-				"dweb:/ipfs/QmWS6SjeNC2XXjaq9dsH5QacrhPP1jHDpWGtTSUwyaHBcx"
+				"bzz-raw://a74a462f5fdc00cb2568461d8c2ff5bc8761f8ba209e598450afabacf88ec3e2",
+				"dweb:/ipfs/QmShesq3KVhhXHtc5N5nRAWHqmPirc68FZ7AnW3PZwwznW"
 			]
 		}
 	},

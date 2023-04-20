@@ -1,0 +1,43 @@
+{
+  "language":"Solidity",
+  "settings":{
+    "optimizer":{
+      "enabled":true,
+      "runs":200
+    },
+    "outputSelection":{
+      "*":{
+        "":[
+          "ast"
+        ],
+        "*":[
+          "abi",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.legacyAssembly",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "evm.gasEstimates",
+          "evm.assembly"
+        ]
+      }
+    },
+    "modelChecker":{
+      "engine":"chc",
+	  "showUnproved": true,
+      "contracts":{
+        "solidity/contracts/BridgeWhenCheap.sol":[
+          "BridgeWhenCheap"
+        ]
+      },
+      "targets":[
+        "assert",
+		"overflow",
+		"underflow"
+      ]
+    }
+  }
+}

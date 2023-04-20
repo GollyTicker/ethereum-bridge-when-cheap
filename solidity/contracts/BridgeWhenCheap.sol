@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
-pragma abicoder v2;
+pragma solidity ^0.8.19.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -55,6 +54,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // arbitrum: goerli hop L2 AMM Wrapper: 0xa832293f2DCe2f092182F17dd873ae06AD5fDbaF
     // arbitrum: goerli fake l2 amm warpper: 0x1Eb7c70da731F41122f3E4fDcf7E6f723018c369
 
+    // solhint-disable-next-line
     constructor(
         uint256 _l2execGasFeeDeposit, // todo. find out what a reasonable initial value should be.
         uint256 _serviceFee,
@@ -240,7 +240,9 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // ====================== OWNER MANAGEMENT FUNCTIONS
 
     // Allow the owner to fund ether for gas fees, if somehow the L2 gas prices rise a lot and user gas deposits aren't enough.
+    /* solhint-disable */
     function ownerDeposit() external payable onlyOwner {}
+    /* solhint-enable */
 
     // Collect service fee.
     function ownerWithdraw(uint256 amount) external onlyOwner nonReentrant {
