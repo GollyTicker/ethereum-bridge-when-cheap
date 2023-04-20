@@ -4,15 +4,19 @@ pragma abicoder v2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 struct BridgeRequest {
     address source;
     address destination;
+    
+    bool isTokenTransfer;
+    IERC20 token;
+
     uint256 amount;
-    uint256 amountOutMin; // this is calculated in the UI and shown to the user as a guarantee of what will definitely arrive.
-    // todo. we need to decrease this by our estimated amount of what changes due differing situations between submit-time and execution time.
+    uint256 amountOutMin;
+    
     uint256 wantedL1GasPrice;
-    // todo. support tokens and not only native ether
     uint256 depositedL2gasFund;
 }
 
@@ -31,25 +35,27 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // Only this amount is allowed to be deducted by the contract owner to pay for infrastructure/development/etc.
     uint256 public collectedNonGasServiceFee;
 
-    // address of the deloyed hop bridge to interact with to bridge funds.
-    address public l2HopBridgeAmmWrapper;
-    // goerli arbitrum hop L2 AMM Wrapper: 0xa832293f2DCe2f092182F17dd873ae06AD5fDbaF
-    // goerli arbitrum fake l2 amm warpper: 0x1Eb7c70da731F41122f3E4fDcf7E6f723018c369
-
     // For each requestor, it stores a struct with the request details for the briding.
     mapping(address => mapping(uint256 => BridgeRequest)) public requests;
 
-    uint256 public layer1ChainId; // mainnet = 1, goerli = 5
+    // destination layer 1 chain id: mainnet = 1, goerli = 5
+    uint256 public layer1ChainId;
+
+    // Supported ERC20 tokens. We use a mapping, so that we can extend the implementation with additional tokens lateron.
+    // Each mapping points to the Hop Bridge L2AmmWrapper for that token for L2 -> L1.
+    // This needs to be manually populated after contract deploment for each token.
+    mapping(IERC20 => address) public bridgeContractOf;
+    // Native Ether: token = address(0)
+    // goerli arbitrum hop L2 AMM Wrapper: 0xa832293f2DCe2f092182F17dd873ae06AD5fDbaF
+    // goerli arbitrum fake l2 amm warpper: 0x1Eb7c70da731F41122f3E4fDcf7E6f723018c369
 
     constructor(
         uint256 _executionGasRequirement, // 0.00015 ether recommended
         uint256 _serviceFee,
-        address _l2HopBridgeAmmWrapper,
         uint256 _layer1ChainId
     ) {
         executionGasRequirement = _executionGasRequirement;
         serviceFee = _serviceFee;
-        l2HopBridgeAmmWrapper = _l2HopBridgeAmmWrapper;
         layer1ChainId = _layer1ChainId;
         checkFeeInvariants();
     }
@@ -68,10 +74,15 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // by the owner of the contract, when the gas fees are low.
     function deposit(
         uint256 requestId,
+        IERC20 token, // if native ETH payment, then token must be 0 address.
+        // if tokenAmount == 0, then a native ETH payment is expected.
+        // if tokenAmount > 0, then native ETH = gas fee requirement and tokenAmount is the amount of transfered tokens.
+        uint256 tokenAmount,
         address destination,
         uint256 wantedL1GasPrice,
         uint256 amountOutMin
-    ) external payable {
+    ) external payable nonReentrant {
+        // CHECKS
         require(msg.sender != address(0), "Sender may not be 0 address");
         require(
             destination != address(0),
@@ -86,7 +97,19 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             "Not enough funds to pay for delayed execution"
         );
 
-        uint256 sentAmount = msg.value - serviceFee; // keep some funds for ourselves for service (delayed execution gas, infrastructure, etc.) 
+        bool isTokenTransfer = tokenAmount != 0;
+        uint256 sentAmount;
+
+        if (isTokenTransfer) {
+            require(bridgeContractOf[token] != address(0), "Token is not supported.");
+            require(msg.value == serviceFee, "For token deposits, pay the service fee exactly.");
+            sentAmount = tokenAmount;
+        }
+        else {
+            require(address(token) == address(0), "Token must be 0 address, when depositing native ether.");
+            // keep some funds for ourselves for service (delayed execution gas, infrastructure, etc.) 
+            sentAmount = msg.value - serviceFee;
+        }
 
         require(
             sentAmount >= amountOutMin,
@@ -98,28 +121,49 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             "request with the same id for the requestor already exists."
         );
 
-        collectNonGasServiceFee();
+        // CHANGES
+        recordCollectedNonGasServiceFee();
 
         requests[msg.sender][requestId] = BridgeRequest({
             source: msg.sender,
             destination: destination,
+            isTokenTransfer: isTokenTransfer,
+            token: token,
             amount: sentAmount,
             amountOutMin: amountOutMin,
             wantedL1GasPrice: wantedL1GasPrice,
             depositedL2gasFund: executionGasRequirement
         });
+
+        // INTERACTIONS
+        // receive deposit. native ether happens automatically. token transfer needs to be done explicitly.
+        if (isTokenTransfer) {
+            require( token.transferFrom(msg.sender, address(this), sentAmount) );
+        }
     }
 
     // Cancel any request and withdraw the funds.
     function withdraw(uint256 requestId) external nonReentrant {
+        // CHECKS
         BridgeRequest memory obsoleteRequest = requests[msg.sender][requestId]; // This is a copy, not a reference.
         require(isDefined(obsoleteRequest), "No request to withdraw");
         assert(obsoleteRequest.source == msg.sender);
 
-        uint256 withdrawAmount = obsoleteRequest.amount + obsoleteRequest.depositedL2gasFund;
+        uint256 withdrawAmount;
+        uint256 nativeEtherAmount = obsoleteRequest.depositedL2gasFund;
+
+        if (obsoleteRequest.isTokenTransfer) {
+            withdrawAmount += obsoleteRequest.amount;
+        } else {
+            nativeEtherAmount += obsoleteRequest.amount;
+        }
+
+        // CHANGES
         delete requests[msg.sender][requestId];
 
-        require( payable(msg.sender).send(withdrawAmount) );
+        // INTERACTIONS
+        require( payable(msg.sender).send(nativeEtherAmount) );
+        require( obsoleteRequest.token.transferFrom(address(this), msg.sender, withdrawAmount) );
     }
 
     // Execute the request for the given requestor address.
@@ -137,19 +181,21 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     )
         external onlyOwner nonReentrant
     {
+        // CHECKS
         BridgeRequest memory toBeBridgedRequest = requests[requestor][requestId];
         require(isDefined(toBeBridgedRequest), "No request to process");
         require(
             toBeBridgedRequest.amount >= bonderFee,
             "Bonder fee cannot exceed amount."
         );
+        uint256 nativeEtherSent = toBeBridgedRequest.isTokenTransfer ? 0 : toBeBridgedRequest.amount;
+        address bridgeContract = bridgeContractOf[toBeBridgedRequest.token];
 
+        // CHANGES
         delete requests[requestor][requestId];
 
-        // refund execution gas to caller
-        require( payable(msg.sender).send(toBeBridgedRequest.depositedL2gasFund) );
-
-        L2_AmmWrapper(l2HopBridgeAmmWrapper).swapAndSend{ value: toBeBridgedRequest.amount } (
+        // INTERACTIONS
+        HopL2AmmWrapper(bridgeContract).swapAndSend{ value: nativeEtherSent } (
             layer1ChainId,
             toBeBridgedRequest.destination,
             toBeBridgedRequest.amount,
@@ -159,6 +205,8 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             destAmountOutMin,
             destDeadline
         );
+        // refund execution gas to caller
+        require( payable(msg.sender).send(toBeBridgedRequest.depositedL2gasFund) );
     }
 
     // ====================== OWNER MANAGEMENT FUNCTIONS
@@ -182,13 +230,19 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         checkFeeInvariants();
     }
 
+    // If hop bridge is extended, we can add new tokens here. We always want to point to the L2_AmmWrapper contract
+    function addSupportForNewToken(IERC20 token, address tokenHopBridge) external onlyOwner {
+        require(bridgeContractOf[token] == address(0), "Token already supported.");
+        bridgeContractOf[token] = tokenHopBridge;
+    }
+
     // ====================== HELPER FUNCTIONS
 
     function checkFeeInvariants() internal view {
         require(serviceFee >= executionGasRequirement, "service fee must cover at least the execution gas requirement");
     }
 
-    function collectNonGasServiceFee() internal {
+    function recordCollectedNonGasServiceFee() internal {
         collectedNonGasServiceFee += serviceFee - executionGasRequirement;
     }
 
@@ -202,7 +256,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     }
 }
 
-interface L2_AmmWrapper {
+interface HopL2AmmWrapper {
     function swapAndSend(
         uint256 chainId,
         address recipient,

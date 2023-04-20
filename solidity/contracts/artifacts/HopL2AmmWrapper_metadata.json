@@ -67,7 +67,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"solidity/contracts/BridgewhenCheap.sol": "L2_AmmWrapper"
+			"solidity/contracts/BridgewhenCheap.sol": "HopL2AmmWrapper"
 		},
 		"evmVersion": "paris",
 		"libraries": {},
@@ -114,11 +114,11 @@
 			]
 		},
 		"solidity/contracts/BridgewhenCheap.sol": {
-			"keccak256": "0x4311b406ebea46e5b2b06f1c99d8ddbc9e34b2fbc6dd8624291138ecd7dc9d63",
+			"keccak256": "0xc696cde1c825fbc1fbfd1b894cefa9431ad963da4994a380c8a1fa7da8e21a0b",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://e65a09f68cb84fe9d3433cd2ebcca0546f02130187cfbe21ecda65629c1ab759",
-				"dweb:/ipfs/QmefdMZW8BT4Ydopi3nxkGTFDVkDbht5cH8YuPa9f99ups"
+				"bzz-raw://23c55d7b11a1297f28638fa2233e8ef2de02e47fab249177cf377abdf499c1ec",
+				"dweb:/ipfs/QmZHF57TrxeZKZSTgmdKkBpjCNTCAdkdJK6Gew7akLugK9"
 			]
 		}
 	},

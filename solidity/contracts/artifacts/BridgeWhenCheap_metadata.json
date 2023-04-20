@@ -18,11 +18,6 @@
 						"type": "uint256"
 					},
 					{
-						"internalType": "address",
-						"name": "_l2HopBridgeAmmWrapper",
-						"type": "address"
-					},
-					{
 						"internalType": "uint256",
 						"name": "_layer1ChainId",
 						"type": "uint256"
@@ -51,6 +46,43 @@
 				"type": "event"
 			},
 			{
+				"inputs": [
+					{
+						"internalType": "contract IERC20",
+						"name": "token",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "tokenHopBridge",
+						"type": "address"
+					}
+				],
+				"name": "addSupportForNewToken",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "contract IERC20",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"name": "bridgeContractOf",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
 				"inputs": [],
 				"name": "collectedNonGasServiceFee",
 				"outputs": [
@@ -68,6 +100,16 @@
 					{
 						"internalType": "uint256",
 						"name": "requestId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "contract IERC20",
+						"name": "token",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "tokenAmount",
 						"type": "uint256"
 					},
 					{
@@ -142,19 +184,6 @@
 						"internalType": "uint256",
 						"name": "",
 						"type": "uint256"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [],
-				"name": "l2HopBridgeAmmWrapper",
-				"outputs": [
-					{
-						"internalType": "address",
-						"name": "",
-						"type": "address"
 					}
 				],
 				"stateMutability": "view",
@@ -239,6 +268,16 @@
 						"type": "address"
 					},
 					{
+						"internalType": "bool",
+						"name": "isTokenTransfer",
+						"type": "bool"
+					},
+					{
+						"internalType": "contract IERC20",
+						"name": "token",
+						"type": "address"
+					},
+					{
 						"internalType": "uint256",
 						"name": "amount",
 						"type": "uint256"
@@ -251,6 +290,11 @@
 					{
 						"internalType": "uint256",
 						"name": "wantedL1GasPrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "depositedL2gasFund",
 						"type": "uint256"
 					}
 				],
@@ -377,6 +421,14 @@
 				"dweb:/ipfs/QmTyFztU3tLEcEDnqqiaW4UJetqsU77LXc6pjc9oTXCK5u"
 			]
 		},
+		"@openzeppelin/contracts/token/ERC20/IERC20.sol": {
+			"keccak256": "0x9750c6b834f7b43000631af5cc30001c5f547b3ceb3635488f140f60e897ea6b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://5a7d5b1ef5d8d5889ad2ed89d8619c09383b80b72ab226e0fe7bde1636481e34",
+				"dweb:/ipfs/QmebXWgtEfumQGBdVeM6c71McLixYXQP5Bk6kKXuoY4Bmr"
+			]
+		},
 		"@openzeppelin/contracts/utils/Context.sol": {
 			"keccak256": "0xe2e337e6dde9ef6b680e07338c493ebea1b5fd09b43424112868e9cc1706bca7",
 			"license": "MIT",
@@ -386,11 +438,11 @@
 			]
 		},
 		"solidity/contracts/BridgewhenCheap.sol": {
-			"keccak256": "0xc5caca24be81e20ef5d9742f053c88913c0ec015987bf00e87c03c6297d1c70a",
+			"keccak256": "0xc696cde1c825fbc1fbfd1b894cefa9431ad963da4994a380c8a1fa7da8e21a0b",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://8f28a458d0747ebbc0c6009bbae885a44c2cba028daf431db3ed05f38c45bcbd",
-				"dweb:/ipfs/Qmf7em9R3g8P6YRibZNUQVWS9FE6kRSDXt8q3o9kRWTqy5"
+				"bzz-raw://23c55d7b11a1297f28638fa2233e8ef2de02e47fab249177cf377abdf499c1ec",
+				"dweb:/ipfs/QmZHF57TrxeZKZSTgmdKkBpjCNTCAdkdJK6Gew7akLugK9"
 			]
 		}
 	},
