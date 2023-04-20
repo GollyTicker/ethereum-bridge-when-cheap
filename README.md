@@ -1,6 +1,7 @@
 
 
-# EXPERIMENTAL!! DO NOT USE WITH REAL FUNDS.
+# EXPERIMENTAL AND WORK IN PROGRESS!!
+# DO NOT USE WITH REAL FUNDS!
 Liabilities and warranties excluded.
 
 ---
@@ -8,104 +9,38 @@ Liabilities and warranties excluded.
 
 # 🌈 Bridge When Cheap 💸
 
-Bridge-when-cheap (BWC) is a simple website to bridge funds from an L2 supported by the [HOP Bridge](https://hop.exchange) to the 
-Ethereum mainnet, when the gas price is low on mainnet.
+Bridge-when-cheap (BWC): Bridge crypto from L2 to Ethereum L1 **at a cheaper fee** and save money!
 
-**Note:** The idea with pre-signing the transaction won't work with MetaMask :/ The RPC method [eth_signTransaction](https://ethereum.github.io/execution-apis/api-documentation) isn [not supported by MetaMask](https://github.com/MetaMask/metamask-extension/issues/7644) due to [security and complexity concerns](https://github.com/MetaMask/metamask-extension/issues/3475).
 
-It seems that the only way to offer such a service is to actually *write a smart contract that sends the funds on
-behalf of the owners when gas is low.* This smart contract would
-* be deployed on multiple L2s
-* store the tuples of (source addr, destination addr, token, value, bonder fee and L1 gas price wants) for each request
-* execute the above requests, when the gas price wants is reached
-* allow the original users to withdraw stored funds if they haven't yet been sent to L1
+It does that by delaying your briding request to a point in time when the gas prices are low on L1 and hence the destination transaction fees are low. *Save money when briding your funds back to mainnet while avoiding to wake up at uncommon times for your cheap transactions!*
 
-## Why?
+The bridge is powered by the [Hop Protocol](https://hop.exchange) and hence corresponding L2s and tokens are supported.
 
-If you want to bridge funds from L2 to L1, then its best to execute such a bridge, when the L1 gas price is low.
-However, it's inconvinient to wake up at uncommon times ust to submit a transaction.
+## How to use
 
-Bridge-when-cheap (BWC) allows you to submit a signed transaction to bridge your funds together with a desired
-L1 gas price `p` (gwei). BWC keeps the signed transaction and *when the L1 gas price reaches `p`*,
-BWC publishes it into the Hop bridge. This moves your funds when the L1 destination gas fees are low - saving you precious 💸.
+1. Open \<TODO-website\> and connect your wallet.
+2. Select the source L2, the token and the amount of funds you want to bridge to L1.
+3. Get a suggested cheaper briding fee based on the recent gas prices.
+4. Approve the token.
+5. Deposit your funds into the smart contract + a small fee for the  gas of the delayed execution.
 
-BWC allows you to save transaction costs if you are willing to wait for a delayed bridging.
+**What happens next?**
 
-A minor caveat: When making a new transaction from the same wallet (potentially unrelated to BWC), publishing it on L2
-and having it executed, the BWC signed transaction with the same nonce will be invalidated.
-In that case, the BWC signed transaction needs to be submitted again, as otherwise no funds will be bridged.
+Your request and funds will be stored in the smart contract.
+A server-node (run by the developer) regularly checks L1 gas prices and the applicability of any requests.
+
+When activity (and hence gas price) on L1 is low and the desired cheaper briding of funds is possible, the server-node will initiate the briding of the funds and they'll arrive in your specified address on L1.
 
 ## How secure and trustless is this?
 
-* ✅ BWC only receives the sigend transaction and cannot steal any funds. Either the transaction is submitted or it is not.
-  This means that either the funds will be bridged or not. But they cannot get lost or be stolen.
-* ✅ You can always invalidate any queued BWC transaction by making a transaction ourself and submitting it.
-  Since the nonce gets used, it's not possible for BWC to submit and run the signed transaction anymore.
-* 🟠 The worst thing BWC could do is to bridge funds when the gas fees are high. However, these
-  tx costs wouldn't go to profit BWC, but the validators on L1 instead. This could only happen,
-  if there is a serious bug which wasn't caught by the tests or if the website behaves maliciously due
-  to a hack or rouge developer.
-  * *TODO*: Is it perhaps to avoid these by having the correct desired amount of transaction fees included in the
-    tx? This way, atmost this amount can get "lost" at all.
-* ℹ️ If the BWC server goes offline, then the funds are not moved. In this case, you can still always cancel the tx or move
-  the funds immediately at a higher gas price.
+In the spirit of the core values of Ethereum, Bridge-When-Cheap offers you desireable guarantees:
+* ✅ The smart contract can only spend the funds to the L1 recipient you provide. They cannot be taken away.
+  * *TODO*. The code is intended to be formally verified to prove these guarantees.
+* ✅ You can always abort a request and withdraw your funds on L2 if you changed your mind.
+  * This can be useful, if the server-node is down, the gas prices are too high to ever bridge your request, etc.
+* ✅ You inherit the same bridging guarantees as provided by the Hop Protocol.
+* ✅ The contract is immutable, hence it cannot be changed maliciously.
 
+Q: *Why not use another bridge, like Layerswap, which also does this at a lower price, but instantly?*
 
----
-
-# Hop v1 SDK Demo
-
-> A simple React demo for the [Hop SDK](https://github.com/hop-protocol/hop/tree/develop/packages/sdk)
-
-## Demo
-
-[https://sdk-demo.hop.exchange/](https://sdk-demo.hop.exchange/)
-
----
-
-# Getting Started with Create React App
-
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
-
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
-
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+You need to trust LayerSwap whereas with Bridge-When-Cheap and Hop Protocol you have verifiable trust. Check the amazing summary at the [l2beat page on Hop Protocol](https://l2beat.com/bridges/projects/hop).
