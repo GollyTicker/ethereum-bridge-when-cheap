@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// A request of what is to be bridged from L1 to L2
+// A request of what is to be bridged from L2 to L1
 // together with the wanted L1 gas price at which this should be executed.
 struct BridgeRequest {
     address source;
