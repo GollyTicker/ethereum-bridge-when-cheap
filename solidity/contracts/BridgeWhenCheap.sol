@@ -272,6 +272,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         external
         onlyOwner
     {
+        require(tokenHopBridge != address(0), "Hop bridge contract address must not be 0 address.");
         require(
             bridgeContractOf[token] == address(0),
             "Token already supported."
