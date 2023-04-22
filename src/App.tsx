@@ -14,7 +14,7 @@ import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
 import { Hop, Chain } from '@hop-protocol/sdk'
 import './App.css'
-import { Checkbox, Link } from '@mui/material'
+import { Link } from '@mui/material'
 
 function TokenDropdown (props: any) {
   const { label, tokens, value, handleChange } = props
@@ -64,20 +64,21 @@ function ChainDropdown (props: any) {
 type GasFn = providers.Provider['getGasPrice']
 type MChain = Chain & { provider: providers.Provider & {orgGetGasPrice: GasFn; futureGetGasPrice: GasFn;} }
 
-function wrapToFutureChain (curr: Chain, futureChain: boolean, wantedGasPrice: BigNumber): Chain {
+function injectWantedGasPriceIntoEthereumChain (curr: Chain, futureChain: boolean, wantedGasPrice: BigNumber): Chain {
   if (curr.chainId !== 1 || curr.provider === null) {
     return curr
   }
 
   const newChain: MChain = curr as any
 
-  if (!newChain.provider.futureGetGasPrice) {
-    console.log('first time init chain')
+  if (!newChain.provider.orgGetGasPrice) {
     newChain.provider.orgGetGasPrice = newChain.provider.getGasPrice
-    newChain.provider.futureGetGasPrice = async () => wantedGasPrice
   }
 
-  console.log('Setting gas price to future?', futureChain)
+  console.log('inject gas price:', formatUnits(wantedGasPrice, 'gwei'))
+
+  newChain.provider.futureGetGasPrice = async () => wantedGasPrice
+
   newChain.provider.getGasPrice = futureChain ? newChain.provider.futureGetGasPrice : newChain.provider.orgGetGasPrice
 
   return newChain
@@ -89,8 +90,7 @@ function App () {
   const [address, setAddress] = useState('')
   const setNativeTokenBalance = useState<any>(null)[1]
   const [signer, setSigner] = useState<any>(null)
-  const [futureChain, setFutureChain] = useState<boolean>(false)
-  const [wantedGasPriceString, setWantedGasPriceString] = useState('15')
+  const [wantedGasPriceString, setWantedGasPriceString] = useState('20')
   const [wantedGasPrice, setWantedGasPrice] = useState(parseUnits(wantedGasPriceString, 'gwei'))
   const [provider] = useState(() => {
     try {
@@ -101,20 +101,22 @@ function App () {
   })
   const [tokenSymbol, setTokenSymbol] = useState('DAI')
   const [fromChain, setFromChain] = useState('arbitrum')
-  const [toChain] = useState('ethereum')
+  const toChain = 'ethereum'
   const [amount, setAmount] = useState('100')
-  const [recipient] = useState('')
+  const [recipient, setRecipient] = useState('')
   const [estimate, setEstimate] = useState<any>(null)
+  const [execNowTotalFee, setExecNowTotalFee] = useState(BigNumber.from(0))
+  const [savedAmount, setSavedAmount] = useState<BigNumber>(BigNumber.from(0))
   const [needsApproval, setNeedsApproval] = useState(false)
   const setTokenBalance = useState<any>(null)[1]
-  const [supportedChains, setSupportedChains] = useState<Chain[]>([])
+  const [supportedChainsPostWrap, setSupportedChainsPostWrap] = useState<Chain[]>([])
   const bridge = useMemo(() => {
     const hop = new Hop('mainnet', signer)
     const bridge = hop.bridge(tokenSymbol)
     return bridge
   }, [tokenSymbol, signer])
 
-  const _supportedChains = useMemo(() => {
+  const supportedChainsPreWrap = useMemo(() => {
     const _chains = bridge.getSupportedChains()
     return _chains.map((chainSlug: string) => bridge.toChainModel(chainSlug))
   }, [bridge])
@@ -219,6 +221,7 @@ function App () {
         await provider.send('eth_requestAccounts', [])
         if (provider.getSigner()) {
           setSigner(provider.getSigner())
+          setRecipient(await provider.getSigner().getAddress())
         }
       }
     } catch (err: any) {
@@ -232,8 +235,9 @@ function App () {
   }
 
   useEffect(() => {
-    setSupportedChains(_supportedChains.map(chain => wrapToFutureChain(chain, futureChain, wantedGasPrice)))
-  }, [_supportedChains, futureChain, wantedGasPrice])
+    setSupportedChainsPostWrap(supportedChainsPreWrap)
+    /* .map(chain => wrapToFutureChain(chain, futureChain, wantedGasPrice)) */
+  }, [supportedChainsPreWrap])
 
   useEffect(() => {
     async function update () {
@@ -242,28 +246,32 @@ function App () {
         setError('')
         setEstimate(null)
         const amountBn = bridge.parseUnits(amount)
-        const _estimate = await bridge.getSendData(amountBn, fromChain, toChain)
-        setEstimate(_estimate)
-        console.log('Estimation:', JSON.stringify(_estimate, null, 2))
-        const txData = await bridge.populateSendTx(amountBn, fromChain, toChain, undefined /* min amount comes here */)
-        console.log('tx data:', JSON.stringify(txData, null, 2))
-        for (const chain of supportedChains) {
-          if (chain.chainId === 1 && chain.provider) {
-            chain
-              .provider
-              .getGasPrice()
-              .then(price => {
-                console.log('using gas price: ', formatUnits(price, 'gwei'), 'gwei.')
-              })
-              .catch(console.warn)
-          }
-        }
+
+        injectWantedGasPriceIntoEthereumChain(
+          bridge.toChainModel(toChain),
+          false,
+          wantedGasPrice
+        )
+        const execNowEstimate = await bridge.getSendData(amountBn, fromChain, toChain)
+        setExecNowTotalFee(execNowEstimate.totalFee)
+
+        injectWantedGasPriceIntoEthereumChain(
+          bridge.toChainModel(toChain),
+          true,
+          wantedGasPrice
+        )
+        const estimate = await bridge.getSendData(amountBn, fromChain, toChain)
+        setEstimate(estimate)
+
+        console.log('Fee diff:', formatUnits(execNowEstimate.totalFee, 'ether'), 'vs', formatUnits(estimate.totalFee, 'ether'))
+        setSavedAmount(execNowEstimate.totalFee.sub(estimate.totalFee))
+        // const txData = await bridge.populateSendTx(amountBn, fromChain, toChain, undefined /* min amount comes here */)
       } catch (err: any) {
         setError(err.message)
       }
     }
     update().catch(console.error)
-  }, [bridge, fromChain, toChain, amount, supportedChains])
+  }, [bridge, fromChain, toChain, amount, supportedChainsPostWrap, wantedGasPrice])
 
   async function handleApprove (event: any) {
     event.preventDefault()
@@ -311,10 +319,11 @@ function App () {
   }
 
   const isConnected = !!signer
-  // const nativeTokenBalanceFormatted = address && nativeTokenBalance ? Number(formatEther(nativeTokenBalance)).toFixed(4) : '-'
-  // const tokenBalanceFormatted = address && tokenBalance ? bridge.formatUnits(tokenBalance).toFixed(4) : '-'
-  const totalFeeFormatted = estimate && amount ? `${bridge.formatUnits(estimate.totalFee).toFixed(4)} ${tokenSymbol}` : '-'
-  const estimatedReceivedFormatted = estimate && amount ? `${bridge.formatUnits(estimate.estimatedReceived).toFixed(4)} ${tokenSymbol}` : '-'
+  const estimatedReceivedFormatted = estimate && amount ? `≈ ${bridge.formatUnits(estimate.estimatedReceived).toFixed(4)} ${tokenSymbol}` : '...'
+  const totalFeeFormatted = estimate && amount ? `${bridge.formatUnits(estimate.totalFee).toFixed(4)} ${tokenSymbol}` : '...'
+  const execNowTotalFeeFormatted = estimate && amount ? `${bridge.formatUnits(execNowTotalFee).toFixed(4)}` : '...'
+  const savedAmountFormatted = estimate ? bridge.formatUnits(savedAmount).toFixed(4) : '...'
+
   const sendEnabled = isConnected && estimate && amount && !needsApproval
 
   return (
@@ -325,14 +334,22 @@ function App () {
             🌈 Bridge When Cheap 💸
           </Typography>
         </Box>
-        <Box mb={2}>
+        <Box mb={1}>
           <Typography variant='h6'>
             <Link href="https://github.com/GollyTicker/ethereum-bridge-when-cheap#readme" target='_blank'>How It Works ↗️</Link>
           </Typography>
         </Box>
-        <Box mb={3}>
-          <Typography variant="h5">
-            ⚠️ Experimental and Work in Progress! Do not use this! ⚠️
+        <Box mb={2} style={{
+          textAlign: 'center',
+          backgroundColor: 'red',
+          color: 'black',
+          fontWeight: 'bold',
+          padding: 'auto 2em auto 2em'
+        }} >
+          <Typography variant="h6">
+            Experimental and Work in Progress!
+            <br/>
+            This is not ready to be used publicly!
           </Typography>
         </Box>
         {!isConnected && (
@@ -371,29 +388,31 @@ function App () {
                   />
                 </Box>
                 <Box mb={2}>
-                  <ChainDropdown label="from" chains={supportedChains} value={fromChain} handleChange={(event: any) => {
-                    setFromChain(event.target.value)
-                  }} />
+                  <ChainDropdown
+                    label="from"
+                    chains={supportedChainsPostWrap.filter(c => !c.isL1)}
+                    value={fromChain}
+                    handleChange={(event: any) => {
+                      setFromChain(event.target.value)
+                    }}
+                  />
                 </Box>
-                <Box mb={1} pl={2}>
-                  to {toChain}
-                </Box>
-                {/*
-                // TODO. allow to set recipient.
-                // TODO. detect if wallet is a smart contract and remind to use a different recipient address.
                 <Box mb={2}>
-                  <TextField fullWidth label="Recipient (optional)" value={recipient} onChange={(event: any) => {
-                    setRecipient(event.target.value)
-                  }} />
-                </Box>
-                */}
-                <Box mb={2}>
-                  <Checkbox checked={futureChain} onChange={(event: any) => {
-                    setFutureChain(event.target.checked)
-                  }} />
-                  when gas price is low at
                   <TextField
-                    style={{ marginLeft: '1em' }}
+                    fullWidth
+                    label="to Ethereum recipient"
+                    value={recipient}
+                    onChange={(event: any) => {
+                      setRecipient(event.target.value)
+                    }}
+                  />
+                </Box>
+                { // TODO. detect if wallet is a smart contract and remind to use a different recipient address.
+                }
+                <Box mb={2}>
+                  <TextField
+                    fullWidth
+                    label="when Ethereum gas price is (gwei)"
                     value={wantedGasPriceString}
                     onChange={(event: any) => {
                       setWantedGasPriceString(event.target.value)
@@ -402,22 +421,30 @@ function App () {
                 </Box>
                 <Box mb={4}>
                   <Box mb={1}>
-                    and receive <strong>{estimatedReceivedFormatted}</strong> (estimated).
-                    <br/>
-                    Total fee: {totalFeeFormatted}
+                    and receive <strong>{estimatedReceivedFormatted}</strong> on Ethereum.
                   </Box>
                   <Box mb={1}>
-                    The cheaper gas will save you ??? {tokenSymbol}
+                    Fee: {totalFeeFormatted} instead
+                    of <s>{execNowTotalFeeFormatted}</s>
                     <br/>
-                    and your request be server within 24h with<br/>
-                    98.6% probability based on historical analysis.
+                    You save&nbsp;
+                    <span
+                      style={{ color: 'darkgreen', fontWeight: 'bold' }}
+                    >
+                      {savedAmountFormatted}&nbsp;
+                      {tokenSymbol} ⭐
+                    </span>
+                  </Box>
+                  <Box mb={1}>
+                    Your {tokenSymbol} will be bridged within 24h
+                    <br/><small>(with 98.6% probability based on historical analysis)</small>.
                   </Box>
                 </Box>
                 <Box mb={2}>
                   <LoadingButton disabled={!needsApproval} onClick={handleApprove} variant="contained">Approve</LoadingButton>
                 </Box>
                 <Box mb={2}>
-                  <LoadingButton disabled={!sendEnabled} onClick={handleSend} variant="contained">Send</LoadingButton>
+                  <LoadingButton disabled={!sendEnabled} onClick={handleSend} variant="contained">Deposit</LoadingButton>
                 </Box>
                 {!!error && (
                   <Box mb={2} style={{ maxWidth: '400px', wordBreak: 'break-word' }}>
