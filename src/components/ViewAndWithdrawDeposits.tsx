@@ -3,8 +3,9 @@ import { GlobalProps } from '../App'
 import { Box } from '@mui/material'
 import { BigNumber } from 'ethers'
 import { formatUnits, parseUnits } from 'ethers/lib/utils'
+import { LoadingButton } from '@mui/lab'
 
-type RequestStatus = 'pending' | 'completed' | 'aborted' | 'failed'
+type RequestStatus = 'waiting' | 'submitted' | 'aborted' | 'failed'
 
 interface Request {
   requestId: string
@@ -19,8 +20,8 @@ interface Request {
 
 function statusText (status: RequestStatus) {
   switch (status) {
-    case 'pending': return '⌛ ' + status
-    case 'completed': return '✅ ' + status
+    case 'waiting': return '⌛ ' + status
+    case 'submitted': return '✅ ' + status + ' to Hop'
     case 'aborted': return '⚪ ' + status
     case 'failed': return '❌ ' + status
   }
@@ -36,7 +37,7 @@ export function ViewAndWithdrawDeposits (props: { global: GlobalProps }) {
       receiver: '0x27349832',
       totalFee: parseUnits('1', 'ether'),
       wantedL1GasPrice: parseUnits('10', 'gwei'),
-      status: 'pending'
+      status: 'waiting'
     }
   ]
 
@@ -63,6 +64,13 @@ export function ViewAndWithdrawDeposits (props: { global: GlobalProps }) {
         </Box>
         <Box ml={2} >
           {statusText(request.status)}
+        </Box>
+        <Box ml={2}>
+            <LoadingButton
+              disabled={request.status !== 'waiting'}
+              onClick={() => 'todo'}
+              variant="outlined"
+            >withdraw</LoadingButton>
         </Box>
       </Box>)
     })}
