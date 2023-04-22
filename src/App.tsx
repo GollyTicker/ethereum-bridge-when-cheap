@@ -8,58 +8,11 @@ import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
 import { BigNumber, providers } from 'ethers'
 import { formatUnits, parseUnits } from 'ethers/lib/utils'
-import InputLabel from '@mui/material/InputLabel'
-import MenuItem from '@mui/material/MenuItem'
-import FormControl from '@mui/material/FormControl'
-import Select from '@mui/material/Select'
 import { Hop, Chain } from '@hop-protocol/sdk'
 import './App.css'
 import { Link } from '@mui/material'
-
-function TokenDropdown (props: any) {
-  const { label, tokens, value, handleChange } = props
-  return (
-    <FormControl style={{ width: '20%' }}>
-      <InputLabel id="select-label">{label}</InputLabel>
-      <Select
-        labelId="select-label"
-        id="simple-select"
-        value={value}
-        label={label}
-        onChange={handleChange}
-      >
-        {tokens?.map((token: any, i: number) => {
-          return (
-            <MenuItem key={i} value={token.symbol}>{token.symbol}</MenuItem>
-          )
-        })}
-      </Select>
-    </FormControl>
-  )
-}
-
-function ChainDropdown (props: any) {
-  const { label, chains, value, handleChange, readOnly } = props
-  return (
-    <FormControl fullWidth>
-      <InputLabel id="select-label">{label}</InputLabel>
-      <Select
-        labelId="select-label"
-        id="simple-select"
-        value={value}
-        label={label}
-        onChange={handleChange}
-        readOnly={readOnly ?? false}
-      >
-        {chains?.map((chain: any, i: number) => {
-          return (
-            <MenuItem key={i} value={chain.slug}>{chain.name}</MenuItem>
-          )
-        })}
-      </Select>
-    </FormControl>
-  )
-}
+import { TokenDropdown } from './components/TokenDropdown'
+import { ChainDropdown } from './components/ChainDropdown'
 
 type GasFn = providers.Provider['getGasPrice']
 type MChain = Chain & { provider: providers.Provider & {orgGetGasPrice: GasFn; futureGetGasPrice: GasFn;} }
@@ -263,7 +216,6 @@ function App () {
         const estimate = await bridge.getSendData(amountBn, fromChain, toChain)
         setEstimate(estimate)
 
-        console.log('Fee diff:', formatUnits(execNowEstimate.totalFee, 'ether'), 'vs', formatUnits(estimate.totalFee, 'ether'))
         setSavedAmount(execNowEstimate.totalFee.sub(estimate.totalFee))
         // const txData = await bridge.populateSendTx(amountBn, fromChain, toChain, undefined /* min amount comes here */)
       } catch (err: any) {
@@ -323,6 +275,10 @@ function App () {
   const totalFeeFormatted = estimate && amount ? `${bridge.formatUnits(estimate.totalFee).toFixed(4)} ${tokenSymbol}` : '...'
   const execNowTotalFeeFormatted = estimate && amount ? `${bridge.formatUnits(execNowTotalFee).toFixed(4)}` : '...'
   const savedAmountFormatted = estimate ? bridge.formatUnits(savedAmount).toFixed(4) : '...'
+  const savedAmountPercentageFormatted = !estimate ? '...' : bridge.formatUnits(savedAmount.mul(100).div(execNowTotalFee).mul(10e8).mul(10e8))
+
+  // todo. this render loop is being run continously... we need to
+  // find the place where it's making troubles...
 
   const sendEnabled = isConnected && estimate && amount && !needsApproval
 
@@ -419,7 +375,7 @@ function App () {
                     }}
                   />
                 </Box>
-                <Box mb={4}>
+                <Box mb={4} pl={1}>
                   <Box mb={1}>
                     and receive <strong>{estimatedReceivedFormatted}</strong> on Ethereum.
                   </Box>
@@ -432,7 +388,8 @@ function App () {
                       style={{ color: 'darkgreen', fontWeight: 'bold' }}
                     >
                       {savedAmountFormatted}&nbsp;
-                      {tokenSymbol} ⭐
+                      {tokenSymbol}&nbsp;
+                      = {savedAmountPercentageFormatted}% ⭐
                     </span>
                   </Box>
                   <Box mb={1}>
@@ -440,19 +397,19 @@ function App () {
                     <br/><small>(with 98.6% probability based on historical analysis)</small>.
                   </Box>
                 </Box>
-                <Box mb={2}>
-                  <LoadingButton disabled={!needsApproval} onClick={handleApprove} variant="contained">Approve</LoadingButton>
+                <Box mb={2} pl={1}>
+                  <LoadingButton disabled={!needsApproval} onClick={handleApprove} variant="contained">{needsApproval ? 'Approve' : 'Approved ✅'}</LoadingButton>
                 </Box>
-                <Box mb={2}>
+                <Box mb={2} pl={1}>
                   <LoadingButton disabled={!sendEnabled} onClick={handleSend} variant="contained">Deposit</LoadingButton>
                 </Box>
                 {!!error && (
-                  <Box mb={2} style={{ maxWidth: '400px', wordBreak: 'break-word' }}>
+                  <Box mb={2} pl={1} style={{ maxWidth: '400px', wordBreak: 'break-word' }}>
                     <Alert severity="error">{error}</Alert>
                   </Box>
                 )}
                 {!!success && (
-                  <Box mb={2}>
+                  <Box mb={2} pl={1}>
                     <Alert severity="success">{success}</Alert>
                   </Box>
                 )}
