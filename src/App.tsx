@@ -103,6 +103,8 @@ function App () {
     setError
   }
 
+  console.log('sadsdf', Date.now())
+
   return (
     <Box p={4} m="0 auto" display="flex" flexDirection="column" justifyContent="center" alignItems="center">
 
