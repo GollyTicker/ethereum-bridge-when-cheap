@@ -7,6 +7,7 @@ import { Header } from './components/Header'
 import { ConnectionButton } from './components/ConnectionButton'
 import { Alert } from '@mui/material'
 import { DepositWorkflow } from './components/DepositWorkflow'
+import { ViewAndWithdrawDeposits } from './components/ViewAndWithdrawDeposits'
 
 export interface GlobalProps {
   address: string
@@ -25,6 +26,7 @@ function App () {
   const [address, setAddress] = useState('')
   const setNativeTokenBalance = useState<any>(null)[1] // todo.
   const [signer, setSigner] = useState<any>(null)
+
   const [provider] = useState(() => {
     try {
       return new providers.Web3Provider((window as any).ethereum, 'any')
@@ -103,8 +105,6 @@ function App () {
     setError
   }
 
-  console.log('sadsdf', Date.now())
-
   return (
     <Box p={4} m="0 auto" display="flex" flexDirection="column" justifyContent="center" alignItems="center">
 
@@ -129,6 +129,8 @@ function App () {
           <Alert severity="success">{success}</Alert>
         </Box>
       )}
+
+      {isConnected && <ViewAndWithdrawDeposits global={globalProps}/>}
     </Box>
   )
 }

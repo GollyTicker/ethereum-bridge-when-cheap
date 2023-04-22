@@ -13,7 +13,7 @@ export function Header () {
         padding: 'auto 2em auto 2em'
       }} >
         <Typography variant="h5">
-          THIS IS UNFINISHED WORK! DO NOT INTERACT WITH THIS!
+          THIS IS UNFINISHED! DO NOT INTERACT WITH THIS!
         </Typography>
       </Box>
       <Box mb={1}>
