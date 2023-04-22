@@ -7,19 +7,19 @@ import Alert from '@mui/material/Alert'
 import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
 import { BigNumber, providers } from 'ethers'
-import { formatEther, formatUnits, parseUnits } from 'ethers/lib/utils'
+import { formatUnits, parseUnits } from 'ethers/lib/utils'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
 import { Hop, Chain } from '@hop-protocol/sdk'
 import './App.css'
-import { Checkbox } from '@mui/material'
+import { Checkbox, Link } from '@mui/material'
 
 function TokenDropdown (props: any) {
   const { label, tokens, value, handleChange } = props
   return (
-    <FormControl fullWidth>
+    <FormControl style={{ width: '20%' }}>
       <InputLabel id="select-label">{label}</InputLabel>
       <Select
         labelId="select-label"
@@ -87,7 +87,7 @@ function App () {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [address, setAddress] = useState('')
-  const [nativeTokenBalance, setNativeTokenBalance] = useState<any>(null)
+  const setNativeTokenBalance = useState<any>(null)[1]
   const [signer, setSigner] = useState<any>(null)
   const [futureChain, setFutureChain] = useState<boolean>(false)
   const [wantedGasPriceString, setWantedGasPriceString] = useState('15')
@@ -106,7 +106,7 @@ function App () {
   const [recipient] = useState('')
   const [estimate, setEstimate] = useState<any>(null)
   const [needsApproval, setNeedsApproval] = useState(false)
-  const [tokenBalance, setTokenBalance] = useState<any>(null)
+  const setTokenBalance = useState<any>(null)[1]
   const [supportedChains, setSupportedChains] = useState<Chain[]>([])
   const bridge = useMemo(() => {
     const hop = new Hop('mainnet', signer)
@@ -244,7 +244,7 @@ function App () {
         const amountBn = bridge.parseUnits(amount)
         const _estimate = await bridge.getSendData(amountBn, fromChain, toChain)
         setEstimate(_estimate)
-        console.log('Estimation:', JSON.stringify(estimate, null, 2))
+        console.log('Estimation:', JSON.stringify(_estimate, null, 2))
         const txData = await bridge.populateSendTx(amountBn, fromChain, toChain, undefined /* min amount comes here */)
         console.log('tx data:', JSON.stringify(txData, null, 2))
         for (const chain of supportedChains) {
@@ -311,12 +311,11 @@ function App () {
   }
 
   const isConnected = !!signer
-  const nativeTokenBalanceFormatted = address && nativeTokenBalance ? Number(formatEther(nativeTokenBalance)).toFixed(4) : '-'
-  const tokenBalanceFormatted = address && tokenBalance ? bridge.formatUnits(tokenBalance).toFixed(4) : '-'
+  // const nativeTokenBalanceFormatted = address && nativeTokenBalance ? Number(formatEther(nativeTokenBalance)).toFixed(4) : '-'
+  // const tokenBalanceFormatted = address && tokenBalance ? bridge.formatUnits(tokenBalance).toFixed(4) : '-'
   const totalFeeFormatted = estimate && amount ? `${bridge.formatUnits(estimate.totalFee).toFixed(4)} ${tokenSymbol}` : '-'
   const estimatedReceivedFormatted = estimate && amount ? `${bridge.formatUnits(estimate.estimatedReceived).toFixed(4)} ${tokenSymbol}` : '-'
   const sendEnabled = isConnected && estimate && amount && !needsApproval
-  const sendSummary = `Send ${amount} ${tokenSymbol} ${fromChain} → ${toChain}`
 
   return (
     <Box>
@@ -326,9 +325,14 @@ function App () {
             🌈 Bridge When Cheap 💸
           </Typography>
         </Box>
+        <Box mb={2}>
+          <Typography variant='h6'>
+            <Link href="https://github.com/GollyTicker/ethereum-bridge-when-cheap#readme" target='_blank'>How It Works ↗️</Link>
+          </Typography>
+        </Box>
         <Box mb={3}>
           <Typography variant="h5">
-            ⚠️ Experimental. Use at your own risk! ⚠️
+            ⚠️ Experimental and Work in Progress! Do not use this! ⚠️
           </Typography>
         </Box>
         {!isConnected && (
@@ -337,45 +341,46 @@ function App () {
           </Box>
         )}
         {isConnected && (
-          <Box>
-            <Box display="flex" flexDirection="column" alignItems="center">
-              <Box mb={1}>
-                <Button onClick={handleDisconnect} variant="contained">Disconnect</Button>
-              </Box>
-              <Box mb={1}>
-                Account: {address}
-              </Box>
-              <Box mb={1}>
-                <Box mb={1}>ETH: {nativeTokenBalanceFormatted}</Box>
-                <Box mb={1}>{tokenSymbol}: {tokenBalanceFormatted}</Box>
+          <Box style={{ fontSize: '1.1em' }} >
+            <Box mb={2} display="flex" flexDirection="column" alignItems={'center'}>
+              <Button onClick={handleDisconnect} variant="outlined">Disconnect</Button>
+            </Box>
+            <Box display="flex" flexDirection="column" pl={3}>
+              <Box>
+                From account&nbsp;
+                <span style={{ whiteSpace: 'pre' }}>{address.substring(0, 8)}</span> {/* todo. add tooltip with full address */}
+                send
               </Box>
             </Box>
             <Box display="flex" flexWrap="wrap">
-              <Box minWidth="400px" p={4}>
+              <Box minWidth="400px" p={2}>
                 <Box mb={2}>
-                  <Typography variant="body1">
-                    Send {tokenSymbol}
-                  </Typography>
+                  <TextField
+                    style={{ width: '78%', paddingRight: '2%' }}
+                    value={amount}
+                    onChange={(event: any) => {
+                      setAmount(event.target.value)
+                    }}
+                  />
+                  <TokenDropdown
+                    tokens={supportedTokens}
+                    value={tokenSymbol}
+                    handleChange={(event: any) => {
+                      setTokenSymbol(event.target.value)
+                    }}
+                  />
                 </Box>
                 <Box mb={2}>
-                  <TokenDropdown tokens={supportedTokens} label="Token" value={tokenSymbol} handleChange={(event: any) => {
-                    setTokenSymbol(event.target.value)
-                  }} />
-                </Box>
-                <Box mb={2}>
-                  <ChainDropdown label="From Chain" chains={supportedChains} value={fromChain} handleChange={(event: any) => {
+                  <ChainDropdown label="from" chains={supportedChains} value={fromChain} handleChange={(event: any) => {
                     setFromChain(event.target.value)
                   }} />
                 </Box>
-                <Box mb={2}>
-                  To Chain: {toChain}
-                </Box>
-                <Box mb={2}>
-                  <TextField fullWidth label="Amount" value={amount} onChange={(event: any) => {
-                    setAmount(event.target.value)
-                  }} />
+                <Box mb={1} pl={2}>
+                  to {toChain}
                 </Box>
                 {/*
+                // TODO. allow to set recipient.
+                // TODO. detect if wallet is a smart contract and remind to use a different recipient address.
                 <Box mb={2}>
                   <TextField fullWidth label="Recipient (optional)" value={recipient} onChange={(event: any) => {
                     setRecipient(event.target.value)
@@ -386,20 +391,26 @@ function App () {
                   <Checkbox checked={futureChain} onChange={(event: any) => {
                     setFutureChain(event.target.checked)
                   }} />
-                  use wanted gas price of
-                  <TextField style={{ marginLeft: '1em' }} label="wantedGasPrice" value={wantedGasPriceString} onChange={(event: any) => {
-                    setWantedGasPriceString(event.target.value)
-                  }}/>
+                  when gas price is low at
+                  <TextField
+                    style={{ marginLeft: '1em' }}
+                    value={wantedGasPriceString}
+                    onChange={(event: any) => {
+                      setWantedGasPriceString(event.target.value)
+                    }}
+                  />
                 </Box>
                 <Box mb={4}>
                   <Box mb={1}>
-                    {sendSummary}
+                    and receive <strong>{estimatedReceivedFormatted}</strong> (estimated).
+                    <br/>
+                    Total fee: {totalFeeFormatted}
                   </Box>
                   <Box mb={1}>
-                    Total Fee: {totalFeeFormatted}
-                  </Box>
-                  <Box mb={1}>
-                    Estimated Received: <strong>{estimatedReceivedFormatted}</strong>
+                    The cheaper gas will save you ??? {tokenSymbol}
+                    <br/>
+                    and your request be server within 24h with<br/>
+                    98.6% probability based on historical analysis.
                   </Box>
                 </Box>
                 <Box mb={2}>
