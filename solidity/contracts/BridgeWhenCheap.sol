@@ -31,6 +31,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // The service fee deducted for each request.
     // Service fee includes infrastructure hosting, execution gas fee, development, etc.
     // It must be larger than the l2execGasFeeDeposit.
+    // ZERO fees are allowed in case we want to make it free for future users.
     uint256 public serviceFee;
 
     // The amount total service fees collected until now. Excludes execution gas fees.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
         
 pragma solidity ^0.8.19.0;
 
@@ -6,11 +6,22 @@ pragma solidity ^0.8.19.0;
 import "remix_tests.sol"; 
 import "remix_accounts.sol";
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import "solidity/contracts/BridgeWhenCheap.sol";
 
-// can have more than oe test contract
-contract testSuite {
+contract Deposit {
+    IERC20 constant nativeEther = IERC20(address(0));
 
+    /// #sender: account-1
+    /// #value: 400
+    function depositSuccessNativeSane() public {
+        new BridgeWhenCheap(10, 50, 1);
+        // assert(bwc.bridgeContractOf(nativeEther) == msg.sender);
+        //bwc.deposit(0, token, tokenAmount, destination, wantedL1GasPrice, amountOutMin);
+    }
+
+    /*
     /// 'beforeAll' runs before all other tests
     /// More special functions are: 'beforeEach', 'beforeAll', 'afterEach' & 'afterAll'
     function beforeAll() public {
@@ -42,5 +53,6 @@ contract testSuite {
         Assert.equal(msg.sender, TestsAccounts.getAccount(1), "Invalid sender");
         Assert.equal(msg.value, 100, "Invalid value");
     }
+    */
 }
     

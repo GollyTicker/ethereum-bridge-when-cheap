@@ -7,43 +7,9 @@
 		"abi": [
 			{
 				"inputs": [],
-				"name": "beforeAll",
+				"name": "constructorSuccessSane",
 				"outputs": [],
 				"stateMutability": "nonpayable",
-				"type": "function"
-			},
-			{
-				"inputs": [],
-				"name": "checkFailure",
-				"outputs": [],
-				"stateMutability": "nonpayable",
-				"type": "function"
-			},
-			{
-				"inputs": [],
-				"name": "checkSenderAndValue",
-				"outputs": [],
-				"stateMutability": "payable",
-				"type": "function"
-			},
-			{
-				"inputs": [],
-				"name": "checkSuccess",
-				"outputs": [],
-				"stateMutability": "nonpayable",
-				"type": "function"
-			},
-			{
-				"inputs": [],
-				"name": "checkSuccess2",
-				"outputs": [
-					{
-						"internalType": "bool",
-						"name": "",
-						"type": "bool"
-					}
-				],
-				"stateMutability": "pure",
 				"type": "function"
 			}
 		],
@@ -54,14 +20,7 @@
 		},
 		"userdoc": {
 			"kind": "user",
-			"methods": {
-				"beforeAll()": {
-					"notice": "'beforeAll' runs before all other tests More special functions are: 'beforeEach', 'beforeAll', 'afterEach' & 'afterAll'"
-				},
-				"checkSenderAndValue()": {
-					"notice": "Custom Transaction Context: https://remix-ide.readthedocs.io/en/latest/unittesting.html#customization #sender: account-1 #value: 100"
-				}
-			},
+			"methods": {},
 			"version": 1
 		}
 	},
@@ -138,11 +97,11 @@
 			]
 		},
 		"solidity/tests/BridgeWhenCheap_test.sol": {
-			"keccak256": "0x7151cd938e85c9c29bc3df546441e1c8cab98ec9c5ae301e9c4d477b1ec01fcd",
+			"keccak256": "0xa5f8fd165c945c0b072900e9c2c64da6096258a370246e7246fe10138cbe2652",
 			"license": "GPL-3.0",
 			"urls": [
-				"bzz-raw://159d66a35451b29af25bd4b6a51d03b3516ce52d3d3fe6d74a776f022c44186f",
-				"dweb:/ipfs/QmeTax1CYFMcefFKPNF7ehR6b4kZAUgopGG7va8nyL13G7"
+				"bzz-raw://878b6066900276cfa5b544a125cbe4124451d325b6999fc99b4c3a697a5bc8c5",
+				"dweb:/ipfs/QmS6sGVyjW6e6U5Egh4J5dGGy2bv6QCsodbibJVeKYYZL1"
 			]
 		}
 	},
