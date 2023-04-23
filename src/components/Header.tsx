@@ -23,7 +23,7 @@ export function Header () {
       </Box>
       <Box mb={1}>
         <Typography variant='h6'>
-          <Link href="https://github.com/GollyTicker/ethereum-bridge-when-cheap#readme" target='_blank'>How It Works ↗️</Link>
+          <Link href="https://github.com/GollyTicker/ethereum-bridge-when-cheap#readme" target='_blank'>What is Bridge-When-Cheap? ↗️</Link>
         </Typography>
       </Box>
     </Box>

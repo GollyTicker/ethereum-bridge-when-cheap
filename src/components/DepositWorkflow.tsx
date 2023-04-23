@@ -27,7 +27,6 @@ export function DepositWorkflow (props: { global: GlobalProps }) {
     (async () => {
       if (address) {
         const code = await provider?.getCode(address)
-        console.log('code:', code)
         setIsContractAccount(code !== '0x')
       }
     })()
@@ -211,7 +210,7 @@ export function DepositWorkflow (props: { global: GlobalProps }) {
         </Box>
       </Box>
       <Box display="flex" flexWrap="wrap">
-        <Box minWidth="400px" p={2}>
+        <Box minWidth="350px" p={2}>
           <Box mb={2}>
             <TextField
               style={{ width: '78%', paddingRight: '2%' }}
