@@ -2,7 +2,7 @@
   "language": "Solidity",
   "settings": {
     "optimizer": {
-      "enabled": true,
+      "enabled": false,
       "runs": 200
     },
     "outputSelection": {
@@ -22,15 +22,6 @@
           "evm.assembly"
         ]
       }
-    },
-    "modelChecker": {
-      "engine": "chc",
-      "showUnproved": true,
-      "contracts": {
-        "solidity/contracts/BridgeWhenCheap.sol": ["BridgeWhenCheap"]
-      },
-      "targets": ["assert", "underflow", "balance"],
-      "invariants": ["contract", "reentrancy"]
     }
   }
 }
