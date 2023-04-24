@@ -7,8 +7,8 @@ BLOCKNR="$1"
 DURATION="5m"
 
 while true; do
-  echo "Running script..."
-  python3 -u download.py "$ENDPOINT" "$BLOCKNR" && echo "Done. Waiting for a $DURATION before downloading again..." && sleep "$DURATION" && continue
-  echo "Error. Aborting."
+  echo "$(date) - Running script..."
+  python3 -u download.py "$ENDPOINT" "$BLOCKNR" && echo "$(date) - Done. Waiting for a $DURATION before downloading again..." && sleep "$DURATION" && continue
+  echo "$(date) - Error. Aborting."
   break
 done
