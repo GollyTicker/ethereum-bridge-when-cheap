@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "solidity/contracts/BridgeWhenCheap.sol";
 
-contract DepositSuccess is BridgeWhenCheap(10, 50, 123) {
+contract DepositSuccess is BridgeWhenCheap(1, 10, 123) {
 
     IERC20 nativeEther = IERC20(address(0));
     IERC20 DAI = IERC20(TestsAccounts.getAccount(9));
@@ -40,20 +40,21 @@ contract DepositSuccess is BridgeWhenCheap(10, 50, 123) {
     /// #value: 300
     function depositSuccessNativeSane() public payable {
         Assert.equal(msg.sender, acc1, "");
-        this.deposit{ value: msg.value }(1, nativeEther, 0, acc2, 10, 200);
+        // we cannot have the tx sent from acc1 here.... solidity is quite limited
+        this.deposit{ value: msg.value }(0, nativeEther, 0, acc2, 10, 200);
         
         // service fee collected
-        Assert.equal(collectedServiceFeeExcludingGas, serviceFee - l2execGasFeeDeposit, "");
+        Assert.equal(collectedServiceFeeExcludingGas, serviceFee - l2execGasFeeDeposit, "8");
 
-        BridgeRequest memory request = pendingRequests[acc1][1];
+        BridgeRequest memory request = pendingRequests[address(this)][0];
 
-        Assert.equal(address(request.token), address(nativeEther), "");
-        Assert.equal(request.isTokenTransfer, false, "");
-        uint256 amount = request.amount;
-        Assert.equal(amount, 300 - serviceFee, "");
-        Assert.equal(request.amountOutMin, 200, "");
-        Assert.equal(request.wantedL1GasPrice, 10, "");
-        Assert.equal(request.l2execGasFeeDeposit, l2execGasFeeDeposit, "");
+        Assert.equal(address(request.token), address(nativeEther), "7");
+        Assert.equal(request.isTokenTransfer, false, "6");
+        Assert.equal(request.wantedL1GasPrice, 10, "5");
+        Assert.equal(request.amount, 300 - serviceFee, "4");
+        Assert.equal(request.amountOutMin, 200, "3");
+        Assert.equal(request.wantedL1GasPrice, 10, "2");
+        Assert.equal(request.l2execGasFeeDeposit, l2execGasFeeDeposit, "1");
         /*
         Assert.equal(request.source, acc1, "");
         Assert.ok(request.destination == acc2, "");

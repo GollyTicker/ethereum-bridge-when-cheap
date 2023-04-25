@@ -76,6 +76,8 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
 
     // ===================== ESSENTIAL FUNCTIONS
 
+    event BR(uint256 requestId, BridgeRequest request);
+
     // Deposit funds which will be bridged to destination via Hop Bridge
     // when the L1 gas fees are at wantedL1GasPrice or lower.
     // The request is recorded in the smart contract and executed lateron by the owner of the contract.
@@ -149,6 +151,8 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             wantedL1GasPrice: wantedL1GasPrice,
             l2execGasFeeDeposit: l2execGasFeeDeposit
         });
+
+        emit BR(requestId, pendingRequests[msg.sender][requestId]);
 
         // INTERACTIONS
         // Receive deposit. Native ether happens automatically. Token transfer needs to be done explicitly and requires approval.
