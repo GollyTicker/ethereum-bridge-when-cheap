@@ -1,3 +1,9 @@
+
+
+Run `remixd` in this folder to then connect it to the remix IDE on ethereum.org.
+
+---
+
 REMIX DEFAULT WORKSPACE
 
 Remix default workspace is present when:

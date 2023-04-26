@@ -8,7 +8,7 @@ import "remix_accounts.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "solidity/contracts/BridgeWhenCheap.sol";
+import "contracts/BridgeWhenCheap.sol";
 
 // can have more than oe test contract
 contract Constructor {

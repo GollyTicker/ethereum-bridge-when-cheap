@@ -18,7 +18,15 @@ module.exports = {
     sourceType: "module",
   },
   plugins: ["react", "@typescript-eslint"],
-  rules: {},
+  rules: {
+    "comma-dangle": "off",
+    quotes: "off",
+    semi: "off",
+    "padded-blocks": "off",
+    "no-trailing-spaces": "off",
+    indent: "off",
+    "space-before-function-paren": "off",
+  },
   settings: {
     react: {
       version: "detect",

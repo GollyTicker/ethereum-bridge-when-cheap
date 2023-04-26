@@ -1,0 +1,22 @@
+{
+  "name": "bridge-when-cheap",
+  "version": "1.0.0",
+  "description": "Run `remixd` in this folder to then connect it to the remix IDE on ethereum.org.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node tests/storage.test.js"
+  },
+  "author": "",
+  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "@openzeppelin/contracts": "^4.8.3",
+    "chai": "^4.3.7"
+  },
+  "dependencies": {
+    "hardhat": "^2.14.0"
+  }
+}

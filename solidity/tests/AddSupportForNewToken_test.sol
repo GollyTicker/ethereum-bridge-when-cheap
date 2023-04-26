@@ -8,7 +8,7 @@ import "remix_accounts.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "solidity/contracts/BridgeWhenCheap.sol";
+import "contracts/BridgeWhenCheap.sol";
 
 contract SupportNewTokens {
     IERC20 constant nativeEther = IERC20(address(0));
