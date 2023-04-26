@@ -5,31 +5,24 @@ module.exports = {
     jest: true,
   },
   extends: [
-    "plugin:react/recommended",
     "standard",
-    "plugin:react-hooks/recommended",
   ],
   parser: "@typescript-eslint/parser",
   parserOptions: {
-    ecmaFeatures: {
-      jsx: true,
-    },
     ecmaVersion: "latest",
     sourceType: "module",
   },
-  plugins: ["react", "@typescript-eslint"],
+  plugins: ["@typescript-eslint"],
   rules: {
+    code: 110,
     "comma-dangle": "off",
     quotes: "off",
     semi: "off",
     "padded-blocks": "off",
     "no-trailing-spaces": "off",
-    indent: "off",
     "space-before-function-paren": "off",
+    "no-multiple-empty-lines": "off",
   },
   settings: {
-    react: {
-      version: "detect",
-    },
   },
 };

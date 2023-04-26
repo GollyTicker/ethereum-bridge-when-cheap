@@ -2,6 +2,8 @@
 
 Run `remixd` in this folder to then connect it to the remix IDE on ethereum.org.
 
+Run npm install and then the shell scripts to actually run the tests.
+
 ---
 
 REMIX DEFAULT WORKSPACE
