@@ -1,4 +1,7 @@
-
+Install z3:
+* python wheel
+  * download from: https://github.com/Z3Prover/z3/releases/download/z3-4.11.0/z3_solver-4.11.0.0-py2.py3-none-manylinux1_x86_64.whl
+  * install wheel
 
 Run `remixd` in this folder to then connect it to the remix IDE on ethereum.org.
 
