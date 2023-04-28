@@ -10,7 +10,6 @@ contract Reproducer is Ownable, ReentrancyGuard {
         address token,
         uint256 wantedL1GasPrice
     ) external payable nonReentrant {
-        // CHECKS
         require(msg.sender != address(0), "Sender may not be 0 address");
         require(
             wantedL1GasPrice > 0,

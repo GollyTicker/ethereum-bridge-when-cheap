@@ -2,8 +2,6 @@
 
 set -eu
 
-# based on: https://docs.soliditylang.org/en/v0.8.17/using-the-compiler.html#input-description
-
 JSON="{
   \"language\": \"Solidity\",
   \"sources\": {
