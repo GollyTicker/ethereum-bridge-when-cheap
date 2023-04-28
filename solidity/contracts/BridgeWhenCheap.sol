@@ -112,10 +112,6 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
 
         if (isTokenTransfer) {
             require(
-                bridgeContractOf[token] != address(0),
-                "Token is not supported."
-            );
-            require(
                 msg.value == serviceFee,
                 "For token deposits, pay the service fee exactly."
             );
@@ -127,6 +123,11 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             );
             sentAmount = msg.value - serviceFee;
         }
+
+        require(
+            bridgeContractOf[token] != address(0),
+            "Token/Ether-bridging is not supported/initialized."
+        );
 
         require(
             sentAmount >= amountOutMin,

@@ -1,8 +1,9 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { BigNumber, ContractTransaction, constants } from "ethers";
+import { BigNumber, BigNumberish, ContractTransaction, constants } from "ethers";
 import { ethers } from "hardhat";
 import { BridgeWhenCheap } from "../typechain-types";
+import { parseUnits } from "ethers/lib/utils";
 
 const addressZero = constants.AddressZero;
 
@@ -41,7 +42,7 @@ async function totalPaidGasFeesOfTx(tx: ContractTransaction): Promise<BigNumber>
 }
 
 describe("BridgeWhenCheap", function () {
-  const l2GasfeeDeposit = 1;
+  const l2GasfeeDeposit = 3;
   const serviceFee = 10;
   const nAccountsIncludingOwner = 4;
   const initialAccountTokenBalance = 1000;
@@ -54,7 +55,9 @@ describe("BridgeWhenCheap", function () {
     const bwc = await (await ethers.getContractFactory("BridgeWhenCheap")).deploy(l2GasfeeDeposit, serviceFee, 123);
     const token = await (await ethers.getContractFactory("TestToken")).deploy();
 
+    await bwc.addSupportForNewToken(nativeEther, fakeL2AmmWrapper.address);
     await bwc.addSupportForNewToken(token.address, fakeL2AmmWrapper.address);
+
     for (const acc of accounts) {
       await token.connect(acc).mint(initialAccountTokenBalance);
       await token.connect(acc).approve(bwc.address, initialAccountTokenBalance);
@@ -71,71 +74,101 @@ describe("BridgeWhenCheap", function () {
       allRequestsEmpty(bwc, [owner].concat(accounts));
     });
 
-    it("native success sane", async () => {
-      const { bwc, owner, accounts, initialNativeBalance} = await loadFixture(fixture);
-      const [acc1, acc2 ] = accounts;
+    interface DepositTestCase {
+      desc?: string;
+      id: BigNumberish;
+      amount: BigNumberish;
+      tokenTransfer: boolean;
+      wantedL1GasFee: BigNumberish;
+      minOutAmount: BigNumberish;
+    }
 
-      const nativeAmountDeposited = 300;
+    function testPermutations(): DepositTestCase[] {
+      const ids: BigNumberish[] = [0, 1, 2, parseUnits("10000", "ether")];
+      const amounts: BigNumberish[] = [0, serviceFee - 1, serviceFee, 300, initialAccountTokenBalance, initialAccountTokenBalance+1, parseUnits("9999", "ether")];
+      const tokenTransfers = [true, false];
+      const wantedL1GasFees = [1, 1000, parseUnits("1", "ether")]
 
-      const deposit = await bwc.connect(acc1).deposit(0, nativeEther, 0, acc2.address, 10, 200, { value: nativeAmountDeposited });
+      const tcs: DepositTestCase[] = [];
 
-      expect(await acc1.getBalance()).to.equal(
-        initialNativeBalance.sub(nativeAmountDeposited).sub(await totalPaidGasFeesOfTx(deposit))
-      );
+      for (const id of ids) {
+        for (const amount of amounts) {
+          for (const tokenTransfer of tokenTransfers) {
+            for (const wantedL1GasFee of wantedL1GasFees) {
 
-      expect(await bwc.collectedServiceFeeExcludingGas()).equal(serviceFee - l2GasfeeDeposit);
+              // amount == 0 implies that it's a nativeEther transfer. so token transfer is excluded then.
+              if (BigNumber.from(0).eq(amount) && tokenTransfer) continue;
+              
+              let minOutAmount: BigNumberish;
+              if (tokenTransfer) {
+                if (BigNumber.from(amount).gt(initialAccountTokenBalance)) continue;
+                minOutAmount = amount;
+              }
+              else {
+                if (BigNumber.from(amount).lt(serviceFee)) continue;
+                minOutAmount = BigNumber.from(amount).sub(serviceFee);
+              }
 
-      const request: BridgeRequest = await bwc.pendingRequests(acc1.address, 0);
+              tcs.push({
+                desc: "a" + amount.toString() + " i" + id.toString() + " tt"+tokenTransfer + " wl1" + wantedL1GasFee.toString(),
+                amount, id, minOutAmount, tokenTransfer, wantedL1GasFee
+              })
+            }
+          }
+        }
+      }
+      return tcs;
+    }
 
-      expect(request.source).equal(acc1.address);
-      expect(request.destination).equal(acc2.address);
-      expect(request.amount).equal(nativeAmountDeposited - serviceFee);
-      expect(request.amountOutMin).equal(200);
-      expect(request.token).equal(nativeEther);
-      expect(request.isTokenTransfer).equal(false);
-      expect(request.l2execGasFeeDeposit).equal(l2GasfeeDeposit);
-      expect(request.wantedL1GasPrice).equal(10);
+    const testCases: DepositTestCase[] = testPermutations();
 
-      expect(isEmpty(await bwc.pendingRequests(acc1.address, 1))).to.be.true;
+    for (const tc of testCases) {
+      it("deposit success " + tc.desc, async () => {
+        const { bwc, owner, accounts, initialNativeBalance, token } = await loadFixture(fixture);
+        const [sender, receiver] = accounts;
 
-      allRequestsEmpty(bwc, [owner].concat(...accounts.slice(1)));
-    });
+        const { id, amount, tokenTransfer, minOutAmount, wantedL1GasFee } = tc;
 
-    // todo. product arguments test. test, that all combinations of valid and invalid arguments don't cheak the system.
+        if (tokenTransfer) {
+          expect(await token.balanceOf(sender.address)).to.equal(initialAccountTokenBalance);
+        }
 
-    it("token success sane", async () => {
-      const { bwc, owner, accounts, token, initialNativeBalance } = await loadFixture(fixture);
-      const [acc1, acc2] = accounts
+        const nativeEtherAmount = tokenTransfer ? serviceFee : amount;
+        const tokenAmount = tokenTransfer ? amount : 0;
+        const whichTokenAddr = tokenTransfer ? token.address : nativeEther;
 
-      expect(await token.balanceOf(acc1.address)).to.equal(initialAccountTokenBalance);
+        const deposit = await bwc
+          .connect(sender)
+          .deposit(id, whichTokenAddr, tokenAmount, receiver.address, wantedL1GasFee, minOutAmount, { value: nativeEtherAmount });
 
-      const tokenAmountDeposited = 300;
+        expect(await sender.getBalance()).to.equal(
+          initialNativeBalance.sub(nativeEtherAmount).sub(await totalPaidGasFeesOfTx(deposit))
+        );
 
-      const deposit = await bwc.connect(acc1).deposit(0, token.address, tokenAmountDeposited, acc2.address, 10, 200, { value: serviceFee });
+        if (tokenTransfer) {
+          expect(await token.balanceOf(sender.address)).to.equal(BigNumber.from(initialAccountTokenBalance).sub(tokenAmount));
+        }
 
-      expect(await acc1.getBalance()).to.equal(
-        initialNativeBalance.sub(serviceFee).sub(await totalPaidGasFeesOfTx(deposit))
-      );
+        expect(await bwc.collectedServiceFeeExcludingGas()).equal(serviceFee - l2GasfeeDeposit);
 
-      expect(await token.balanceOf(acc1.address)).to.equal(initialAccountTokenBalance - tokenAmountDeposited);
+        const request: BridgeRequest = await bwc.pendingRequests(sender.address, id);
 
-      expect(await bwc.collectedServiceFeeExcludingGas()).equal(serviceFee - l2GasfeeDeposit);
+        expect(request.source).equal(sender.address);
+        expect(request.destination).equal(receiver.address);
+        expect(request.amount).equal(BigNumber.from(amount).sub(tokenTransfer ? 0 : serviceFee));
+        expect(request.amountOutMin).equal(minOutAmount);
+        expect(request.token).equal(whichTokenAddr);
+        expect(request.isTokenTransfer).equal(tokenTransfer);
+        expect(request.l2execGasFeeDeposit).equal(l2GasfeeDeposit);
+        expect(request.wantedL1GasPrice).equal(wantedL1GasFee);
 
-      const request: BridgeRequest = await bwc.pendingRequests(acc1.address, 0);
+        expect(isEmpty(await bwc.pendingRequests(sender.address, BigNumber.from(id).add(1)))).to.be.true;
 
-      expect(request.source).equal(acc1.address);
-      expect(request.destination).equal(acc2.address);
-      expect(request.amount).equal(300);
-      expect(request.amountOutMin).equal(200);
-      expect(request.token).equal(token.address);
-      expect(request.isTokenTransfer).equal(true);
-      expect(request.l2execGasFeeDeposit).equal(l2GasfeeDeposit);
-      expect(request.wantedL1GasPrice).equal(10);
+        allRequestsEmpty(bwc, [owner].concat(...accounts.slice(1)));
+      });
+    }
 
-      expect(isEmpty(await bwc.pendingRequests(acc1.address, 1))).to.be.true;
-
-      allRequestsEmpty(bwc, [owner].concat(...accounts.slice(1)));
-    });
+    // todo. product arguments test. test, that all combinations of valid and invalid arguments don't break the system.
 
   });
 
