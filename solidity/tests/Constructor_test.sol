@@ -6,8 +6,6 @@ pragma solidity ^0.8.19.0;
 import "remix_tests.sol"; 
 import "remix_accounts.sol";
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import "contracts/BridgeWhenCheap.sol";
 
 // can have more than oe test contract
