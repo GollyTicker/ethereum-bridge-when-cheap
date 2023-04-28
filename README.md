@@ -19,3 +19,5 @@ Warning: CHC: Underflow (resulting value less than 0) might happen here.
 
 This is very unxpected, as the logic in the code doesn't suggest, that this is an error!
 
+Furthermore, what is even more unexpected, is that changing even unrelated lines (e.g. removing the secondParam)
+from the function changes the output of the analysis.
