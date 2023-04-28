@@ -11,14 +11,15 @@ Reproduce the bug via:
 
 ```
 Warning: CHC: Underflow (resulting value less than 0) might happen here.
-  --> Reproducer.sol:27:26:
+  --> Reproducer.sol:20:26:
    |
-27 |             sentAmount = msg.value - 0;
+20 |             sentAmount = msg.value - 0;
    |                          ^^^^^^^^^^^^^
-
 ```
 
 This is very unxpected, as the logic in the code doesn't suggest, that this is an error!
 
 Furthermore, what is even more unexpected, is that changing even unrelated lines (e.g. removing the secondParam)
 from the function changes the output of the analysis.
+
+I encounted this error on a Ubuntu LTE 22.04 and reporduced it on two different machines.
