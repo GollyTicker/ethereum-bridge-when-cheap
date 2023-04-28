@@ -4,7 +4,6 @@ import { BigNumber, BigNumberish, ContractTransaction, constants } from "ethers"
 import { ethers } from "hardhat";
 import { BridgeWhenCheap } from "../typechain-types";
 import { parseUnits } from "ethers/lib/utils";
-import { send } from "process";
 
 const addressZero = constants.AddressZero;
 
@@ -56,6 +55,8 @@ interface DepositTestCase {
   wantedL1GasFee: BigNumberish;
   minOutAmount: BigNumberish;
   followUp: { bonderFee: BigNumberish; } | 'withdraw';
+  expectSuccessDeposit: boolean;
+  expectSuccessExec: boolean;
 }
 
 function testPermutations(): DepositTestCase[] {
@@ -69,30 +70,32 @@ function testPermutations(): DepositTestCase[] {
   for (const id of ids) {
     for (const amount of amounts) {
       for (const tokenTransfer of tokenTransfers) {
+        let expectSuccessDeposit = true;
         // amount == 0 implies that it's a nativeEther transfer. so token transfer is excluded then.
-        if (amount.eq(0) && tokenTransfer) continue;
+        if (amount.eq(0) && tokenTransfer) continue; // zero amount will be misinterpreted and isn't relevant
 
-        const bonderFees = [0, amount.div(10), amount];
+        const bonderFees = [0, amount.div(10), amount.div(2), amount];
         for (const bonderFee of bonderFees) {
 
           let minOutAmount: BigNumberish;
           if (tokenTransfer) {
-            if (amount.gt(initialAccountTokenBalance)) continue;
+            if (amount.gt(initialAccountTokenBalance)) expectSuccessDeposit = false;
             minOutAmount = amount.sub(bonderFee);
           }
           else {
-            if (amount.lt(serviceFee)) continue;
+            if (amount.lt(serviceFee)) expectSuccessDeposit = false;
             minOutAmount = BigNumber.from(amount).sub(serviceFee).sub(bonderFee);
           }
-          if (minOutAmount.lt(0)) continue;
+          if (minOutAmount.lt(0)) continue; // tx cannot be sent
 
-          if (amount.sub(bonderFee).lt(minOutAmount) || BigNumber.from(bonderFee).gt(amount)) continue;
+          let expectSuccessExec = true;
+          if (amount.sub(bonderFee).lt(minOutAmount) || BigNumber.from(bonderFee).gt(amount)) expectSuccessExec = false;
 
           for (const wantedL1GasFee of wantedL1GasFees) {
             for (const execRequest of [true, false]) {
               tcs.push({
-                desc: "a" + amount.toString() + " i" + id.toString() + " tt"+tokenTransfer + " wl1" + wantedL1GasFee.toString() + (execRequest ? " bf"+bonderFee.toString() : " wd"),
-                amount, id, minOutAmount, tokenTransfer, wantedL1GasFee,
+                desc: "depGood" + expectSuccessDeposit + " execGood" + expectSuccessExec + " a" + amount.toString() + " i" + id.toString() + " tt"+tokenTransfer + " wl1" + wantedL1GasFee.toString() + (execRequest ? " bf"+bonderFee.toString() : " wd"),
+                amount, id, minOutAmount, tokenTransfer, wantedL1GasFee, expectSuccessDeposit, expectSuccessExec,
                 followUp: execRequest ? { bonderFee } : "withdraw"
               })
             }
@@ -101,6 +104,7 @@ function testPermutations(): DepositTestCase[] {
       }
     }
   }
+
   return tcs;
 }
 
@@ -135,14 +139,14 @@ describe("BridgeWhenCheap", function () {
     });
 
     for (const tc of testPermutations()) {
-      it("end2end workflow success " + tc.desc, async () => {
+      it("end2end workflow " + (tc.expectSuccessDeposit && tc.expectSuccessExec ? "success" : "failure") + " " + tc.desc, async () => {
         const { bwc, owner, accounts, initialNativeBalance, token, fakeL2AmmWrapper} = await loadFixture(fixture);
         const [sender, receiver] = accounts;
 
 
         // ======================== deposit
 
-        const { id, amount, tokenTransfer, minOutAmount, wantedL1GasFee, followUp } = tc;
+        const { id, amount, tokenTransfer, minOutAmount, wantedL1GasFee, followUp, expectSuccessDeposit, expectSuccessExec } = tc;
 
         if (tokenTransfer) {
           expect(await token.balanceOf(sender.address)).to.equal(initialAccountTokenBalance);
@@ -152,9 +156,16 @@ describe("BridgeWhenCheap", function () {
         const tokenAmount = tokenTransfer ? amount : 0;
         const whichTokenAddr = tokenTransfer ? token.address : nativeEther;
 
-        const deposit = await bwc
+        const depositP = bwc
           .connect(sender)
           .deposit(id, whichTokenAddr, tokenAmount, receiver.address, wantedL1GasFee, minOutAmount, { value: nativeEtherAmount });
+        
+        if (!expectSuccessDeposit) {
+          await expect(depositP).to.be.reverted;
+          return;
+        }
+
+        const deposit = await depositP;
 
         expect(await sender.getBalance()).to.equal(
           initialNativeBalance.sub(nativeEtherAmount).sub(await totalPaidGasFeesOfTx(deposit))
@@ -208,7 +219,14 @@ describe("BridgeWhenCheap", function () {
           const requestorNativeBalance = await sender.getBalance();
           const requestorTokenBalance = await token.balanceOf(sender.address);
 
-          const exec = await bwc.executeRequest(sender.address, id, followUp.bonderFee, 0, 0, minOutAmount, 0);
+          const execP = bwc.executeRequest(sender.address, id, followUp.bonderFee, 0, 0, minOutAmount, 0);
+
+          if (!expectSuccessExec) {
+            await expect(execP).to.be.reverted;
+            return;
+          }
+          const exec = await execP;
+
           expect(exec)
             .to.emit(fakeL2AmmWrapper, "SwapAndSend")
             .withArgs(
