@@ -1,8 +1,0 @@
-[submodule "hop-contracts-v1"]
-	path = hop-contracts-v1
-	url = git@github.com:hop-protocol/contracts.git
-
-[submodule "hop-v1-monorepo"]
-	path = hop-v1-monorepo
-	url = git@github.com:hop-protocol/hop.git
-	branch = develop

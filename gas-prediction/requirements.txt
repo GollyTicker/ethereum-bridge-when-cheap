@@ -1,7 +1,0 @@
-web3>=6.1.0
-numpy
-skforecast
-matplotlib
-seaborn
-pyaf
-

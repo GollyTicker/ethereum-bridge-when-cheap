@@ -7,22 +7,21 @@ set -eu
 JSON="{
   \"language\": \"Solidity\",
   \"sources\": {
-    \"BridgeWhenCheap.sol\": { \"content\": $(cat contracts/BridgeWhenCheap.sol | jq -Rs .) }
+    \"Reproducer.sol\": { \"content\": $(cat Reproducer.sol | jq -Rs .) }
   },
   \"settings\": {
     \"modelChecker\": {
       \"engine\": \"chc\",
       \"showUnproved\": true,
       \"contracts\": {
-        \"BridgeWhenCheap.sol\": [\"BridgeWhenCheap\"]
+        \"Reproducer.sol\": [\"Reproducer\"]
       },
-      \"targets\": [\"assert\", \"underflow\", \"balance\"],
+      \"targets\": [\"assert\", \"underflow\", \"balance\", \"constantCondition\"],
       \"invariants\": [\"contract\", \"reentrancy\"]
     }
   }
 }"
 
-rm -rf out/* || true
 echo "$JSON" |
-  npx solc --verbose --standard-json --base-path . --include-path .deps/npm --include-path node_nodules |
-  jq
+  npx solc --verbose --standard-json --base-path . --include-path node_nodules |
+  jq -r ".errors[].formattedMessage"
