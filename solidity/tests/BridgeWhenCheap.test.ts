@@ -4,6 +4,7 @@ import { BigNumber, BigNumberish, ContractTransaction, constants } from "ethers"
 import { ethers } from "hardhat";
 import { BridgeWhenCheap } from "../typechain-types";
 import { parseUnits } from "ethers/lib/utils";
+import { send } from "process";
 
 const addressZero = constants.AddressZero;
 
@@ -41,11 +42,70 @@ async function totalPaidGasFeesOfTx(tx: ContractTransaction): Promise<BigNumber>
   return (await receipt).gasUsed.mul((await receipt).effectiveGasPrice);
 }
 
+const l2GasfeeDeposit = 3;
+const serviceFee = 10;
+const nAccountsIncludingOwner = 4;
+const initialAccountTokenBalance = 1000;
+
+
+interface DepositTestCase {
+  desc?: string;
+  id: BigNumberish;
+  amount: BigNumber;
+  tokenTransfer: boolean;
+  wantedL1GasFee: BigNumberish;
+  minOutAmount: BigNumberish;
+  followUp: { bonderFee: BigNumberish; } | 'withdraw';
+}
+
+function testPermutations(): DepositTestCase[] {
+  const ids: BigNumberish[] = [0, 1, parseUnits("10000", "ether")];
+  const amounts: BigNumber[] = [0, serviceFee - 1, serviceFee, 300, initialAccountTokenBalance, initialAccountTokenBalance+1, parseUnits("9999", "ether")].map(BigNumber.from);
+  const tokenTransfers = [true, false];
+  const wantedL1GasFees = [1, parseUnits("1", "ether")];
+
+  const tcs: DepositTestCase[] = [];
+
+  for (const id of ids) {
+    for (const amount of amounts) {
+      for (const tokenTransfer of tokenTransfers) {
+        // amount == 0 implies that it's a nativeEther transfer. so token transfer is excluded then.
+        if (amount.eq(0) && tokenTransfer) continue;
+
+        const bonderFees = [0, amount.div(10), amount];
+        for (const bonderFee of bonderFees) {
+
+          let minOutAmount: BigNumberish;
+          if (tokenTransfer) {
+            if (amount.gt(initialAccountTokenBalance)) continue;
+            minOutAmount = amount.sub(bonderFee);
+          }
+          else {
+            if (amount.lt(serviceFee)) continue;
+            minOutAmount = BigNumber.from(amount).sub(serviceFee).sub(bonderFee);
+          }
+          if (minOutAmount.lt(0)) continue;
+
+          if (amount.sub(bonderFee).lt(minOutAmount) || BigNumber.from(bonderFee).gt(amount)) continue;
+
+          for (const wantedL1GasFee of wantedL1GasFees) {
+            for (const execRequest of [true, false]) {
+              tcs.push({
+                desc: "a" + amount.toString() + " i" + id.toString() + " tt"+tokenTransfer + " wl1" + wantedL1GasFee.toString() + (execRequest ? " bf"+bonderFee.toString() : " wd"),
+                amount, id, minOutAmount, tokenTransfer, wantedL1GasFee,
+                followUp: execRequest ? { bonderFee } : "withdraw"
+              })
+            }
+          }
+        }
+      }
+    }
+  }
+  return tcs;
+}
+
+
 describe("BridgeWhenCheap", function () {
-  const l2GasfeeDeposit = 3;
-  const serviceFee = 10;
-  const nAccountsIncludingOwner = 4;
-  const initialAccountTokenBalance = 1000;
 
   async function fixture() {
     const accountsAndOwner = await ethers.getSigners();
@@ -65,7 +125,7 @@ describe("BridgeWhenCheap", function () {
 
     const initialNativeBalance = await accounts[0].getBalance();
 
-    return { bwc: bwc, owner: accountsAndOwner[0], accounts, initialNativeBalance, token };
+    return { bwc: bwc, owner: accountsAndOwner[0], accounts, initialNativeBalance, token, fakeL2AmmWrapper };
   }
 
   describe("Deposits", function () {
@@ -74,60 +134,15 @@ describe("BridgeWhenCheap", function () {
       allRequestsEmpty(bwc, [owner].concat(accounts));
     });
 
-    interface DepositTestCase {
-      desc?: string;
-      id: BigNumberish;
-      amount: BigNumberish;
-      tokenTransfer: boolean;
-      wantedL1GasFee: BigNumberish;
-      minOutAmount: BigNumberish;
-    }
-
-    function testPermutations(): DepositTestCase[] {
-      const ids: BigNumberish[] = [0, 1, 2, parseUnits("10000", "ether")];
-      const amounts: BigNumberish[] = [0, serviceFee - 1, serviceFee, 300, initialAccountTokenBalance, initialAccountTokenBalance+1, parseUnits("9999", "ether")];
-      const tokenTransfers = [true, false];
-      const wantedL1GasFees = [1, 1000, parseUnits("1", "ether")]
-
-      const tcs: DepositTestCase[] = [];
-
-      for (const id of ids) {
-        for (const amount of amounts) {
-          for (const tokenTransfer of tokenTransfers) {
-            for (const wantedL1GasFee of wantedL1GasFees) {
-
-              // amount == 0 implies that it's a nativeEther transfer. so token transfer is excluded then.
-              if (BigNumber.from(0).eq(amount) && tokenTransfer) continue;
-              
-              let minOutAmount: BigNumberish;
-              if (tokenTransfer) {
-                if (BigNumber.from(amount).gt(initialAccountTokenBalance)) continue;
-                minOutAmount = amount;
-              }
-              else {
-                if (BigNumber.from(amount).lt(serviceFee)) continue;
-                minOutAmount = BigNumber.from(amount).sub(serviceFee);
-              }
-
-              tcs.push({
-                desc: "a" + amount.toString() + " i" + id.toString() + " tt"+tokenTransfer + " wl1" + wantedL1GasFee.toString(),
-                amount, id, minOutAmount, tokenTransfer, wantedL1GasFee
-              })
-            }
-          }
-        }
-      }
-      return tcs;
-    }
-
-    const testCases: DepositTestCase[] = testPermutations();
-
-    for (const tc of testCases) {
-      it("deposit success " + tc.desc, async () => {
-        const { bwc, owner, accounts, initialNativeBalance, token } = await loadFixture(fixture);
+    for (const tc of testPermutations()) {
+      it("end2end workflow success " + tc.desc, async () => {
+        const { bwc, owner, accounts, initialNativeBalance, token, fakeL2AmmWrapper} = await loadFixture(fixture);
         const [sender, receiver] = accounts;
 
-        const { id, amount, tokenTransfer, minOutAmount, wantedL1GasFee } = tc;
+
+        // ======================== deposit
+
+        const { id, amount, tokenTransfer, minOutAmount, wantedL1GasFee, followUp } = tc;
 
         if (tokenTransfer) {
           expect(await token.balanceOf(sender.address)).to.equal(initialAccountTokenBalance);
@@ -165,10 +180,65 @@ describe("BridgeWhenCheap", function () {
         expect(isEmpty(await bwc.pendingRequests(sender.address, BigNumber.from(id).add(1)))).to.be.true;
 
         allRequestsEmpty(bwc, [owner].concat(...accounts.slice(1)));
+
+
+        if (followUp === "withdraw") {
+          // ======================== withdraw
+
+          const requestorNativeBalance = await sender.getBalance();
+          const requestorTokenBalance = await token.balanceOf(sender.address);
+
+          const tx = await bwc.connect(sender).withdraw(id);
+
+          const expectedNativeEtherBalance = requestorNativeBalance
+            .add(tokenTransfer ? 0 : request.amount)
+            .add(l2GasfeeDeposit)
+            .sub(await totalPaidGasFeesOfTx(tx));
+          const expectedTokenBalance = requestorTokenBalance.add(tokenTransfer ? request.amount : 0);
+
+          expect(await sender.getBalance()).to.equal(expectedNativeEtherBalance);
+          expect(await token.balanceOf(sender.address)).to.equal(expectedTokenBalance);
+        }
+        else {
+          // ======================== execute request
+
+          const ownerBalanceBeforeExec = await owner.getBalance();
+          const nativeEtherSent = tokenTransfer ? 0 : request.amount;
+
+          const requestorNativeBalance = await sender.getBalance();
+          const requestorTokenBalance = await token.balanceOf(sender.address);
+
+          const exec = await bwc.executeRequest(sender.address, id, followUp.bonderFee, 0, 0, minOutAmount, 0);
+          expect(exec)
+            .to.emit(fakeL2AmmWrapper, "SwapAndSend")
+            .withArgs(
+              owner.address,
+              nativeEtherSent,
+              0,
+              receiver.address,
+              request.amount,
+              followUp.bonderFee,
+              0,
+              0,
+              request.amountOutMin,
+              0
+            );
+
+          expect(isEmpty(await bwc.pendingRequests(sender.address, id))).to.be.true;
+
+          expect(await owner.getBalance()).to.equal(ownerBalanceBeforeExec.add(l2GasfeeDeposit).sub(await totalPaidGasFeesOfTx(exec)));
+
+          // requestor balances don't change.
+          expect(await sender.getBalance()).equal(requestorNativeBalance);
+          expect(await token.balanceOf(sender.address)).equal(requestorTokenBalance);
+
+        }
       });
     }
 
     // todo. product arguments test. test, that all combinations of valid and invalid arguments don't break the system.
+
+    // todo. how do we test for werid interactions and specific edge hard-to-imagine cases?
 
   });
 

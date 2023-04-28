@@ -165,13 +165,12 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // Cancel any request belonging to the caller and withdraw the funds.
     function withdraw(uint256 requestId) external nonReentrant {
         // CHECKS
-        BridgeRequest memory obsoleteRequest = pendingRequests[msg.sender][
-            requestId
-        ]; // This is a copy, not a reference.
+        // This is a copy, not a reference.
+        BridgeRequest memory obsoleteRequest = pendingRequests[msg.sender][requestId];
         require(isDefined(obsoleteRequest), "No request to withdraw.");
         assert(obsoleteRequest.source == msg.sender);
 
-        uint256 withdrawTokenAmount;
+        uint256 withdrawTokenAmount = 0;
         // refund the l2 execution gas deposit, as it will not be used anymore.
         uint256 withdrawNativeEtherAmount = obsoleteRequest.l2execGasFeeDeposit;
 
@@ -186,13 +185,14 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
 
         // INTERACTIONS
         require(payable(msg.sender).send(withdrawNativeEtherAmount));
-        require(
-            obsoleteRequest.token.transferFrom(
-                address(this),
-                msg.sender,
-                withdrawTokenAmount
-            )
-        );
+        if (obsoleteRequest.isTokenTransfer) {
+            require(
+                obsoleteRequest.token.transfer(
+                    msg.sender,
+                    withdrawTokenAmount
+                )
+            );
+        }
     }
 
     // Execute the request for the given requestor address and request id.
@@ -218,6 +218,11 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             toBeBridgedRequest.amount >= bonderFee,
             "Bonder fee cannot exceed amount."
         );
+        require(
+            toBeBridgedRequest.amount - bonderFee >= amountOutMin,
+            "Guarantees destination amount cannot be more than the to-be-bridged-amount after fees."
+        );
+
         uint256 nativeEtherSent = toBeBridgedRequest.isTokenTransfer
             ? 0
             : toBeBridgedRequest.amount;
@@ -234,7 +239,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             bonderFee,
             amountOutMin,
             deadline,
-            destAmountOutMin,
+            destAmountOutMin, // todo. test against bonderFee?
             destDeadline
         );
         // refund execution gas to caller
