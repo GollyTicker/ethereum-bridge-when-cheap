@@ -11,7 +11,8 @@ JSON="{
   },
   \"settings\": {
     \"modelChecker\": {
-      \"engine\": \"chc\",
+      \"engine\": \"all\",
+      \"timeout\": 120000,
       \"showUnproved\": true,
       \"contracts\": {
         \"BridgeWhenCheap.sol\": [\"BridgeWhenCheap\"]
@@ -24,5 +25,12 @@ JSON="{
 
 rm -rf out/* || true
 echo "$JSON" |
-  npx solc --verbose --standard-json --base-path . --include-path .deps/npm --include-path node_nodules |
-  jq
+  solc --standard-json --base-path . --include-path .deps/npm --include-path node_nodules >out.log 2>out.err
+
+echo " ============= Output saved in out.log/out.err =============="
+
+cat out.log | jq "."
+
+echo "============ formatted ============="
+
+cat out.log | jq -r ".errors[].formattedMessage"

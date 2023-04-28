@@ -3,6 +3,13 @@ Install z3:
   * download from: https://github.com/Z3Prover/z3/releases/download/z3-4.11.0/z3_solver-4.11.0.0-py2.py3-none-manylinux1_x86_64.whl
   * install wheel
 
+Install solc via ppa:
+```bash
+sudo add-apt-repository ppa:ethereum/ethereum
+sudo apt-get update
+sudo apt-get install solc
+```
+
 Run `remixd` in this folder to then connect it to the remix IDE on ethereum.org.
 
 Run npm install and then the shell scripts to actually run the tests.
