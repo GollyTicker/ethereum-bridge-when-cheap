@@ -4,9 +4,10 @@
 Reproduce the bug via:
 * clone this repository
 * switch to this branch `smtchecker-problem`
-* install `jq`
+* install `jq` and `z3` (ubuntu package, 4.8.10 is latest)
 * `npm ci` to install sloc `^0.8.19`
-* `npm run compile` to get the following error
+* `npm run compile` to get the following error (with some formatting)
+  * output of compilation is saved into out.log and out.err
 
 ```
 Warning: CHC: Underflow (resulting value less than 0) might happen here.

@@ -4,4 +4,4 @@ coverage.json
 node_modules
 *.gif
 .vscode
-
+out.*

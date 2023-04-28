@@ -20,6 +20,9 @@ JSON="{
   }
 }"
 
-echo "$JSON" |
-  npx solc --verbose --standard-json --base-path . --include-path node_nodules |
-  jq -r ".errors[].formattedMessage"
+echo "$JSON" | npx solc --verbose --standard-json --base-path . --include-path node_nodules > out.log 2> out.err
+
+cat out.log | jq "."
+
+echo "=============== formatted ==================="
+cat out.log | jq -r ".errors[].formattedMessage"
