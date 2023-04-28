@@ -2,6 +2,9 @@
 ## SMTChecker Problem Reproducer
 
 Reproduce the bug via:
+* clone this repository
+* switch to this branch `smtchecker-problem`
+* install `jq`
 * `npm ci` to install sloc `^0.8.19`
 * `npm run compile` to get the following error
 

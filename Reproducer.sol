@@ -8,17 +8,11 @@ import "node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract Reproducer is Ownable, ReentrancyGuard {
     function deposit(
         address token,
-        uint256 wantedL1GasPrice
+        uint256 secondParam
     ) external payable nonReentrant {
         require(msg.sender != address(0), "Sender may not be 0 address");
-        require(
-            wantedL1GasPrice > 0,
-            "Wanted L1 gas price must be strictly positive"
-        );
-        require(
-            msg.value >= 0,
-            "Not enough funds to pay for delayed execution"
-        );
+        require(secondParam > 0, "");
+        require(msg.value >= 0, "Not enough funds to pay for delayed execution");
 
         bool isTokenTransfer = true;
         uint256 sentAmount;
