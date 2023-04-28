@@ -10,6 +10,7 @@ JSON="{
   \"settings\": {
     \"modelChecker\": {
       \"engine\": \"chc\",
+      \"timeout\": 10000,
       \"showUnproved\": true,
       \"contracts\": {
         \"Reproducer.sol\": [\"Reproducer\"]
@@ -20,7 +21,8 @@ JSON="{
   }
 }"
 
-echo "$JSON" | npx solc --verbose --standard-json --base-path . --include-path node_nodules > out.log 2> out.err
+# requires solc installed as unix package.
+echo "$JSON" | solc --standard-json --base-path . --include-path node_nodules > out.log 2> out.err
 
 cat out.log | jq "."
 
