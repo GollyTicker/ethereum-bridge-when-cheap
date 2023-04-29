@@ -2,4 +2,4 @@
 
 set -eu
 
-npx hardhat test
+npx hardhat test "$@"
