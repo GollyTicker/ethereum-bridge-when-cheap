@@ -159,6 +159,17 @@ describe("BridgeWhenCheap", function () {
         const tokenAmount = tokenTransfer ? amount : 0;
         const whichTokenAddr = tokenTransfer ? token.address : nativeEther;
 
+        const expectedRequest: BridgeRequest = {
+          source: sender.address,
+          destination: receiver.address,
+          amount: BigNumber.from(amount).sub(tokenTransfer ? 0 : serviceFee),
+          amountOutMin: BigNumber.from(minOutAmount),
+          token: whichTokenAddr,
+          isTokenTransfer: tokenTransfer,
+          l2execGasFeeDeposit: BigNumber.from(l2GasfeeDeposit),
+          wantedL1GasPrice: BigNumber.from(wantedL1GasFee)
+        };
+
         const depositP = bwc
           .connect(sender)
           .deposit(id, whichTokenAddr, tokenAmount, receiver.address, wantedL1GasFee, minOutAmount, { value: nativeEtherAmount });
@@ -167,6 +178,10 @@ describe("BridgeWhenCheap", function () {
           await expect(depositP).to.be.revertedWith(expectDepositFailure);
           return;
         }
+
+        expect(depositP)
+          .to.emit(bwc, "BridgeRequested")
+          .withArgs(id, expectedRequest);
 
         const deposit = await depositP;
 
@@ -182,14 +197,14 @@ describe("BridgeWhenCheap", function () {
 
         const request: BridgeRequest = await bwc.pendingRequests(sender.address, id);
 
-        expect(request.source).equal(sender.address);
-        expect(request.destination).equal(receiver.address);
-        expect(request.amount).equal(BigNumber.from(amount).sub(tokenTransfer ? 0 : serviceFee));
-        expect(request.amountOutMin).equal(minOutAmount);
-        expect(request.token).equal(whichTokenAddr);
-        expect(request.isTokenTransfer).equal(tokenTransfer);
-        expect(request.l2execGasFeeDeposit).equal(l2GasfeeDeposit);
-        expect(request.wantedL1GasPrice).equal(wantedL1GasFee);
+        expect(request.source).equal(expectedRequest.source);
+        expect(request.destination).equal(expectedRequest.destination);
+        expect(request.amount).equal(expectedRequest.amount);
+        expect(request.amountOutMin).equal(expectedRequest.amountOutMin);
+        expect(request.isTokenTransfer).equal(expectedRequest.isTokenTransfer);
+        expect(request.token).equal(expectedRequest.token);
+        expect(request.l2execGasFeeDeposit).equal(expectedRequest.l2execGasFeeDeposit);
+        expect(request.wantedL1GasPrice).equal(expectedRequest.wantedL1GasPrice);
 
         expect(isEmpty(await bwc.pendingRequests(sender.address, BigNumber.from(id).add(1)))).to.be.true;
 
@@ -202,7 +217,12 @@ describe("BridgeWhenCheap", function () {
           const requestorNativeBalance = await sender.getBalance();
           const requestorTokenBalance = await token.balanceOf(sender.address);
 
-          const tx = await bwc.connect(sender).withdraw(id);
+          const withdrawP = bwc.connect(sender).withdraw(id);
+          expect(withdrawP)
+            .to.emit(bwc, "BridgeRequestWithdrawn")
+            .withArgs(id, request);
+
+          const tx = await withdrawP;
 
           const expectedNativeEtherBalance = requestorNativeBalance
             .add(tokenTransfer ? 0 : request.amount)
@@ -244,6 +264,10 @@ describe("BridgeWhenCheap", function () {
               request.amountOutMin,
               0
             );
+
+          expect(execP)
+            .to.emit(bwc, "BridgeExecutionSubmitted")
+            .withArgs(id, request);
 
           expect(isEmpty(await bwc.pendingRequests(sender.address, id))).to.be.true;
 

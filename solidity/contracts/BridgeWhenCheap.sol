@@ -18,10 +18,7 @@ struct BridgeRequest {
     uint256 l2execGasFeeDeposit; // we also store this here, because the l2execGasFeeDeposit amount might change during the lifetime of the contract.
 }
 
-// todo. add events. What should be emitted as an event in the first place.
-// Is it sufficient to only emit on deposit, withdraw and executeReques?
-
-// todo. creat a contact email
+// todo. create a contact email
 /// @custom:security-contact bridge-when-cheap@gmail.com
 contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // The amount of total gas required to execute a single L2 -> L1 Hop Bridge via the executeRequest function.
@@ -77,6 +74,8 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // ===================== ESSENTIAL FUNCTIONS
 
     event BridgeRequested(uint256 requestId, BridgeRequest request);
+    event BridgeExecutionSubmitted(uint256 requestId, BridgeRequest request);
+    event BridgeRequestWithdrawn(uint256 requestId, BridgeRequest request);
 
     // Deposit funds which will be bridged to destination via Hop Bridge
     // when the L1 gas fees are at wantedL1GasPrice or lower.
@@ -193,6 +192,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
                 )
             );
         }
+        emit BridgeRequestWithdrawn(requestId, obsoleteRequest);
     }
 
     // Execute the request for the given requestor address and request id.
@@ -239,13 +239,15 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             bonderFee,
             amountOutMin,
             deadline,
-            destAmountOutMin, // todo. test against bonderFee?
+            destAmountOutMin,
             destDeadline
         );
         // refund execution gas to caller
         require(
             payable(msg.sender).send(toBeBridgedRequest.l2execGasFeeDeposit)
         );
+
+        emit BridgeExecutionSubmitted(requestId, toBeBridgedRequest);
     }
 
     // ====================== OWNER MANAGEMENT FUNCTIONS
