@@ -21,7 +21,6 @@ describe("AddSupportForNewToken", function () {
     
     const token = await (await ethers.getContractFactory("TestToken")).deploy();
 
-    // await bwc.addSupportForNewToken(nativeEther, fakeL2AmmWrapper.address);
     return { bwc, owner, nonOwner, token,
       tokenBridgesToTest: [
         { token: nativeEther, bridge: firstFakeBridge},
