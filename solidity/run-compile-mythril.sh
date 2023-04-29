@@ -10,14 +10,14 @@ docker run \
     set -eu
     cd /wd
     echo "Running in $PWD ..."
-    #solc --base-path . --include-path node_modules contracts/BridgeWhenCheap.sol --abi
-    #echo "=================="
     myth -v 4 \
       analyze \
       --solc-args "--base-path . --include-path node_modules" \
+      --solc-json /wd/mythril.solc.json \
       --solv 0.8.19 \
       contracts/BridgeWhenCheap.sol \
-      -t 4 --parallel-solving -b 3
+      -t 1 --parallel-solving -b 10 --execution-timeout 120
+    # --transaction-sequences "[[0xa191078a]]" \
   '
 
 #analyze \

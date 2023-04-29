@@ -6,3 +6,7 @@ coverage.json
 
 out.*
 
+scrible.metadata.json
+
+*.sol.original
+*.sol.instrumented

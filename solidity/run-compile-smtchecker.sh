@@ -12,7 +12,7 @@ JSON="{
   \"settings\": {
     \"modelChecker\": {
       \"engine\": \"all\",
-      \"timeout\": 120000,
+      \"timeout\": 10000,
       \"showUnproved\": true,
       \"contracts\": {
         \"BridgeWhenCheap.sol\": [\"BridgeWhenCheap\"]
@@ -23,11 +23,9 @@ JSON="{
   }
 }"
 
-rm -rf out/* || true
+echo " ============= Output will be saved into out.log/out.err =============="
 echo "$JSON" |
   solc --standard-json --base-path . --include-path .deps/npm --include-path node_nodules >out.log 2>out.err
-
-echo " ============= Output saved in out.log/out.err =============="
 
 cat out.log | jq "."
 

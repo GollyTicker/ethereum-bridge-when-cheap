@@ -76,7 +76,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
 
     // ===================== ESSENTIAL FUNCTIONS
 
-    event BR(uint256 requestId, BridgeRequest request);
+    event BridgeRequested(uint256 requestId, BridgeRequest request);
 
     // Deposit funds which will be bridged to destination via Hop Bridge
     // when the L1 gas fees are at wantedL1GasPrice or lower.
@@ -153,7 +153,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             l2execGasFeeDeposit: l2execGasFeeDeposit
         });
 
-        emit BR(requestId, pendingRequests[msg.sender][requestId]);
+        emit BridgeRequested(requestId, pendingRequests[msg.sender][requestId]);
 
         // INTERACTIONS
         // Receive deposit. Native ether happens automatically. Token transfer needs to be done explicitly and requires approval.
@@ -292,7 +292,8 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     }
 
     // ====================== HELPER FUNCTIONS
-
+    // todo. this should create an error with scribble.
+    /// #if_succeeds "service fee >= l2gasFeeDeposit" serviceFee > l2execGasFeeDeposit; 
     function checkFeeInvariants() internal view {
         require(
             serviceFee >= l2execGasFeeDeposit,
