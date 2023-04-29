@@ -17,7 +17,7 @@ docker run \
       --solc-args "--base-path . --include-path node_modules" \
       --solv 0.8.19 \
       contracts/BridgeWhenCheap.sol \
-      -t 2 --parallel-solving -b 3
+      -t 4 --parallel-solving -b 3
   '
 
 #analyze \
