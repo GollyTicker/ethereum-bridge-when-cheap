@@ -83,7 +83,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     function deposit(
         uint256 requestId,
         // if native ETH payment, then token must be 0 address.
-        IERC20 token,
+        IERC20 tokenOrEtherAddr,
         // if tokenAmount == 0, then a native ETH payment is expected.
         // if tokenAmount > 0, then native ETH must equal serviceFee and tokenAmount is the desired amount of transfered tokens.
         uint256 tokenAmount,
@@ -117,14 +117,14 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             sentAmount = tokenAmount;
         } else {
             require(
-                address(token) == address(0),
+                address(tokenOrEtherAddr) == address(0),
                 "Token must be 0 address, when depositing native ether."
             );
             sentAmount = msg.value - serviceFee;
         }
 
         require(
-            bridgeContractOf[token] != address(0),
+            bridgeContractOf[tokenOrEtherAddr] != address(0),
             "Token/Ether-bridging is not supported/initialized."
         );
 
@@ -145,7 +145,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             source: msg.sender,
             destination: destination,
             isTokenTransfer: isTokenTransfer,
-            token: token,
+            token: tokenOrEtherAddr,
             amount: sentAmount,
             amountOutMin: amountOutMin,
             wantedL1GasPrice: wantedL1GasPrice,
@@ -157,7 +157,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         // INTERACTIONS
         // Receive deposit. Native ether happens automatically. Token transfer needs to be done explicitly and requires approval.
         if (isTokenTransfer) {
-            require(token.transferFrom(msg.sender, address(this), sentAmount));
+            require(tokenOrEtherAddr.transferFrom(msg.sender, address(this), sentAmount));
         }
     }
 

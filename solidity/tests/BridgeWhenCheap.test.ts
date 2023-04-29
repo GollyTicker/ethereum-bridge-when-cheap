@@ -3,11 +3,13 @@ import { expect } from "chai";
 import { BigNumber, BigNumberish, ContractTransaction, constants } from "ethers";
 import { ethers } from "hardhat";
 import { BridgeWhenCheap } from "../typechain-types";
+import { BridgeRequestStructOutput, BridgeRequestedEventObject, BridgeRequestWithdrawnEventObject, BridgeExecutionSubmittedEventObject } from "../typechain-types/contracts/BridgeWhenCheap.sol/BridgeWhenCheap";
+import { SwapAndSendEventObject } from "../typechain-types/contracts/test/Fake_L2_AmmWrapper";
 import { parseUnits } from "ethers/lib/utils";
 
 const addressZero = constants.AddressZero;
 
-type BridgeRequest = {
+interface BridgeRequest {
   source: string;
   destination: string;
   isTokenTransfer: boolean;
@@ -17,6 +19,13 @@ type BridgeRequest = {
   wantedL1GasPrice: BigNumber;
   l2execGasFeeDeposit: BigNumber;
 };
+
+// transform simple object types to the output type from hardhat JS framework.
+function toStructOutput(simpleObject: BridgeRequest): BridgeRequestStructOutput {
+  const keys = ["source", "destination", "isTokenTransfer", "token", "amount", "amountOutMin", "wantedL1GasPrice", "l2execGasFeeDeposit" ];
+  const array: any = keys.map(k => (simpleObject as any)[k]);
+  return Object.assign(array, simpleObject);
+}
 
 const nativeEther = addressZero;
 
@@ -43,6 +52,7 @@ async function totalPaidGasFeesOfTx(tx: ContractTransaction): Promise<BigNumber>
 
 const l2GasfeeDeposit = 3;
 const serviceFee = 10;
+const heldFeePerRequest = serviceFee - l2GasfeeDeposit;
 const nAccountsIncludingOwner = 4;
 const initialAccountTokenBalance = 1000;
 const initialAllowance = 3000;
@@ -111,10 +121,34 @@ function testPermutations(): DepositTestCase[] {
   return tcs;
 }
 
+async function GetEventByName<T>(name: string, tx: ContractTransaction): Promise<T> {
+  return (await tx.wait()).events?.filter((x) => x.event === name)[0].args as T;
+}
+
 
 describe("BridgeWhenCheap", function () {
 
-  async function fixture() {
+  /*
+  !! HOW TO WRITE ASSERTIONS HERE !!
+  
+  test that a `value: Promise<T>` equals expected:
+    expect(await value).to.equal(expected);
+  
+  test that a `tx: Promise<T>` reverts with some error:
+    await expect(tx)
+      .to.be.revertedWith(<reg-exp or string>);
+  
+  test that a `tx: Promise<T>` satisfies some property:
+    await expect(tx)
+      .to.be.<verify-property>;
+
+  Ensure that two things happen:
+    * EVERY `EXPECT` ASSERTIONS HAS TO HAVE AT LEAST ONE `AWAIT` (unless purely synchronous functions)
+    * `EXPECT` CAN ONLY PROCESS VALUES or PROMISES, BUT NOT FUNCTIONS ()) => { ... promise ... }!
+
+  */
+
+  async function fixture(addTokensSupport: boolean, addTokenApprovals: boolean) {
     const accountsAndOwner = await ethers.getSigners();
     const accounts = accountsAndOwner.slice(1, nAccountsIncludingOwner) // i = 1,2,3 = 3 test accounts
     
@@ -122,12 +156,14 @@ describe("BridgeWhenCheap", function () {
     const bwc = await (await ethers.getContractFactory("BridgeWhenCheap")).deploy(l2GasfeeDeposit, serviceFee, 123);
     const token = await (await ethers.getContractFactory("TestToken")).deploy();
 
-    await bwc.addSupportForNewToken(nativeEther, fakeL2AmmWrapper.address);
-    await bwc.addSupportForNewToken(token.address, fakeL2AmmWrapper.address);
+    if (addTokensSupport) {
+      await bwc.addSupportForNewToken(nativeEther, fakeL2AmmWrapper.address);
+      await bwc.addSupportForNewToken(token.address, fakeL2AmmWrapper.address);
+    }
 
     for (const acc of accounts) {
       await token.connect(acc).mint(initialAccountTokenBalance);
-      await token.connect(acc).approve(bwc.address, initialAllowance);
+      addTokenApprovals && await token.connect(acc).approve(bwc.address, initialAllowance);
     }
 
     const initialNativeBalance = await accounts[0].getBalance();
@@ -135,15 +171,19 @@ describe("BridgeWhenCheap", function () {
     return { bwc: bwc, owner: accountsAndOwner[0], accounts, initialNativeBalance, token, fakeL2AmmWrapper };
   }
 
+  const fixtureBarebone = () => fixture(false, false)
+  const fixtureWithTokenSupportAndApprovals = () => fixture(true, true)
+
   describe("Deposits", function () {
     it("initially empty", async function () {
-      const { bwc, owner, accounts } = await loadFixture(fixture);
+      const { bwc, owner, accounts } = await loadFixture(fixtureWithTokenSupportAndApprovals);
       allRequestsEmpty(bwc, [owner].concat(accounts));
     });
 
     for (const tc of testPermutations()) {
+
       it("end2end workflow " + (tc.expectDepositFailure && tc.expectExecFailure ? "success" : "failure") + " " + tc.desc, async () => {
-        const { bwc, owner, accounts, initialNativeBalance, token, fakeL2AmmWrapper} = await loadFixture(fixture);
+        const { bwc, owner, accounts, initialNativeBalance, token, fakeL2AmmWrapper} = await loadFixture(fixtureWithTokenSupportAndApprovals);
         const [sender, receiver] = accounts;
 
 
@@ -179,11 +219,14 @@ describe("BridgeWhenCheap", function () {
           return;
         }
 
-        expect(depositP)
-          .to.emit(bwc, "BridgeRequested")
-          .withArgs(id, expectedRequest);
-
         const deposit = await depositP;
+
+        // Check event correctly emitted
+        // ideally, we want to use waffles' expect(...).to.emit(...), but that fails for some hard to dicern reason. hence we check manually.
+        const actualBridgeRequestedEvent = await GetEventByName<BridgeRequestedEventObject>("BridgeRequested", deposit);
+        expect(actualBridgeRequestedEvent.requestId).to.equal(id);
+        expect(actualBridgeRequestedEvent.request).to.deep.equal(toStructOutput(expectedRequest));
+        // ====================== ^^^^^^ getting this all right was difficult !! ^^^^^ ================================
 
         expect(await sender.getBalance()).to.equal(
           initialNativeBalance.sub(nativeEtherAmount).sub(await totalPaidGasFeesOfTx(deposit))
@@ -217,21 +260,23 @@ describe("BridgeWhenCheap", function () {
           const requestorNativeBalance = await sender.getBalance();
           const requestorTokenBalance = await token.balanceOf(sender.address);
 
-          const withdrawP = bwc.connect(sender).withdraw(id);
-          expect(withdrawP)
-            .to.emit(bwc, "BridgeRequestWithdrawn")
-            .withArgs(id, request);
+          const withdraw = await bwc.connect(sender).withdraw(id);
 
-          const tx = await withdrawP;
+          // Check event correctly emitted
+          const actualBridgeRequestWithdrawnEvent = await GetEventByName<BridgeRequestWithdrawnEventObject>("BridgeRequestWithdrawn", withdraw);
+          expect(actualBridgeRequestWithdrawnEvent.requestId).to.equal(id);
+          expect(actualBridgeRequestWithdrawnEvent.request).to.deep.equal(toStructOutput(expectedRequest));
 
           const expectedNativeEtherBalance = requestorNativeBalance
             .add(tokenTransfer ? 0 : request.amount)
             .add(l2GasfeeDeposit)
-            .sub(await totalPaidGasFeesOfTx(tx));
+            .sub(await totalPaidGasFeesOfTx(withdraw));
           const expectedTokenBalance = requestorTokenBalance.add(tokenTransfer ? request.amount : 0);
 
           expect(await sender.getBalance()).to.equal(expectedNativeEtherBalance);
           expect(await token.balanceOf(sender.address)).to.equal(expectedTokenBalance);
+
+          expect(isEmpty(await bwc.pendingRequests(sender.address, id))).to.be.true;
         }
         else {
           // ======================== execute request
@@ -249,25 +294,15 @@ describe("BridgeWhenCheap", function () {
             return;
           }
           const exec = await execP;
-
-          expect(exec)
+          
+          // Check events correctly emitted
+          await expect(exec)
             .to.emit(fakeL2AmmWrapper, "SwapAndSend")
-            .withArgs(
-              owner.address,
-              nativeEtherSent,
-              0,
-              receiver.address,
-              request.amount,
-              followUp.bonderFee,
-              0,
-              0,
-              request.amountOutMin,
-              0
-            );
+            .withArgs(owner.address,nativeEtherSent,0,receiver.address,request.amount,followUp.bonderFee,0,0,request.amountOutMin,0);
 
-          expect(execP)
-            .to.emit(bwc, "BridgeExecutionSubmitted")
-            .withArgs(id, request);
+          const actualBridgeExecutionSubmittedEvent = await GetEventByName<BridgeExecutionSubmittedEventObject>("BridgeExecutionSubmitted", exec);
+          expect(actualBridgeExecutionSubmittedEvent.requestId).to.equal(id);
+          expect(actualBridgeExecutionSubmittedEvent.request).to.deep.equal(toStructOutput(expectedRequest));
 
           expect(isEmpty(await bwc.pendingRequests(sender.address, id))).to.be.true;
 
@@ -284,6 +319,60 @@ describe("BridgeWhenCheap", function () {
     // todo. product arguments test. test, that all combinations of valid and invalid arguments don't break the system.
 
     // todo. how do we test for werid interactions and specific edge hard-to-imagine cases?
+
+  });
+
+  describe("Diverse Workflows", async () => {
+    it("supports an example workflow of user txs and owner mgmt txs", async () => {
+      const { bwc, accounts: [acc1, acc2], fakeL2AmmWrapper, initialNativeBalance, owner, token } = await loadFixture(fixtureBarebone);
+
+      // user txs fail before tokens are supported
+      await expect( bwc.connect(acc1).deposit(0, nativeEther, 0, acc2.address, 10, 0, {value: 100}) ).to.be.reverted;
+      await expect( bwc.connect(acc1).withdraw(0) ).to.be.reverted;
+
+      // owner adds tokens
+      await bwc.addSupportForNewToken(nativeEther, fakeL2AmmWrapper.address);
+      await bwc.addSupportForNewToken(token.address, fakeL2AmmWrapper.address);
+
+      // owner cant withdraw anything.
+      expect(await bwc.collectedServiceFeeExcludingGas()).to.equal(0);
+      await expect(bwc.ownerWithdraw(1)).to.be.revertedWith(/Cannot withdraw more funds than the collected non gas service fees/);
+
+      // users cannot transact before approval.
+      await expect(bwc.connect(acc1).deposit(0, token.address, 100, acc2.address, 10, 0, {value: serviceFee}) ).to.be.revertedWith(/ERC20.*allowance/);
+
+      // but ether can already be deposited
+      await expect(
+          bwc.connect(acc1).deposit(0, nativeEther, 0, acc2.address, 10, 400, { value: 500 })
+        ).to.changeEtherBalances([acc1, bwc], [-500, 500]);
+
+      await expect(
+          bwc.connect(acc2).deposit(5, nativeEther, 0, acc2.address, 10, 900, { value: 1000 })
+        ).to.changeEtherBalances([acc2, bwc], [-1000, 1000]);
+
+      // and withdrawn
+      await expect(bwc.connect(acc2).withdraw(0)).to.be.reverted;
+      await expect(
+          bwc.connect(acc2).withdraw(5)
+        ).to.changeEtherBalances([acc2, bwc], [1000 - heldFeePerRequest, -(1000 - heldFeePerRequest)]);
+
+      // and let's approve the tokens now
+      token.connect(acc1).approve(bwc.address,initialAllowance);
+      token.connect(acc2).approve(bwc.address,initialAllowance);
+
+      // now all kinds of deposits can be made.
+      await expect(
+          bwc.connect(acc1).deposit(1, nativeEther, 0, acc2.address, 30, 0, { value: 5000 })
+        ).to.changeEtherBalances([acc1, bwc], [-5000, 5000]);
+
+      await expect(
+          bwc.connect(acc2).deposit(5, token.address, 200, acc1.address, 40, 190, { value: serviceFee })
+        ).to.changeEtherBalances([acc2, bwc], [-serviceFee, serviceFee])
+        .to.changeTokenBalances(token, [acc2, bwc], [-200, 200]);
+
+      // todo. continue with token-withdraw, executions, owner-withdraws, change both fees,
+      // more deposits and withdraws and executions (some which were submitted before fee change).
+    });
 
   });
 });
