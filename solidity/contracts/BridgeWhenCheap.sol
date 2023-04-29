@@ -220,7 +220,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         );
         require(
             toBeBridgedRequest.amount - bonderFee >= amountOutMin,
-            "Guarantees destination amount cannot be more than the to-be-bridged-amount after fees."
+            "Guaranteed destination amount cannot be more than the to-be-bridged-amount after fees."
         );
 
         uint256 nativeEtherSent = toBeBridgedRequest.isTokenTransfer

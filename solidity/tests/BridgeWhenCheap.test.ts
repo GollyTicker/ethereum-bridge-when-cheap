@@ -45,6 +45,7 @@ const l2GasfeeDeposit = 3;
 const serviceFee = 10;
 const nAccountsIncludingOwner = 4;
 const initialAccountTokenBalance = 1000;
+const initialAllowance = 3000;
 
 
 interface DepositTestCase {
@@ -55,8 +56,8 @@ interface DepositTestCase {
   wantedL1GasFee: BigNumberish;
   minOutAmount: BigNumberish;
   followUp: { bonderFee: BigNumberish; } | 'withdraw';
-  expectSuccessDeposit: boolean;
-  expectSuccessExec: boolean;
+  expectDepositFailure?: RegExp;
+  expectExecFailure?: RegExp;
 }
 
 function testPermutations(): DepositTestCase[] {
@@ -70,7 +71,7 @@ function testPermutations(): DepositTestCase[] {
   for (const id of ids) {
     for (const amount of amounts) {
       for (const tokenTransfer of tokenTransfers) {
-        let expectSuccessDeposit = true;
+        let expectDepositFailure = undefined;
         // amount == 0 implies that it's a nativeEther transfer. so token transfer is excluded then.
         if (amount.eq(0) && tokenTransfer) continue; // zero amount will be misinterpreted and isn't relevant
 
@@ -79,23 +80,25 @@ function testPermutations(): DepositTestCase[] {
 
           let minOutAmount: BigNumberish;
           if (tokenTransfer) {
-            if (amount.gt(initialAccountTokenBalance)) expectSuccessDeposit = false;
+            if (amount.gt(initialAllowance)) expectDepositFailure = expectDepositFailure ?? /ERC20: insufficient allowance/;
+            if (amount.gt(initialAccountTokenBalance)) expectDepositFailure = expectDepositFailure ?? /ERC20: transfer amount exceeds balance/;
             minOutAmount = amount.sub(bonderFee);
           }
           else {
-            if (amount.lt(serviceFee)) expectSuccessDeposit = false;
+            if (amount.lt(serviceFee)) expectDepositFailure = expectDepositFailure ?? /Not enough funds to pay for delayed execution/;
             minOutAmount = BigNumber.from(amount).sub(serviceFee).sub(bonderFee);
           }
           if (minOutAmount.lt(0)) continue; // tx cannot be sent
 
-          let expectSuccessExec = true;
-          if (amount.sub(bonderFee).lt(minOutAmount) || BigNumber.from(bonderFee).gt(amount)) expectSuccessExec = false;
+          let expectExecFailure = undefined;
+          if (amount.sub(bonderFee).lt(minOutAmount)) expectExecFailure = /Bonder fee cannot exceed amount/;
+          if (BigNumber.from(bonderFee).gt(amount)) expectExecFailure = /Guaranteed destination amount cannot be more than the to-be-bridged-amount after fees/;
 
           for (const wantedL1GasFee of wantedL1GasFees) {
             for (const execRequest of [true, false]) {
               tcs.push({
-                desc: "depGood" + expectSuccessDeposit + " execGood" + expectSuccessExec + " a" + amount.toString() + " i" + id.toString() + " tt"+tokenTransfer + " wl1" + wantedL1GasFee.toString() + (execRequest ? " bf"+bonderFee.toString() : " wd"),
-                amount, id, minOutAmount, tokenTransfer, wantedL1GasFee, expectSuccessDeposit, expectSuccessExec,
+                desc: "depGood" + expectDepositFailure + " execGood" + expectExecFailure + " a" + amount.toString() + " i" + id.toString() + " tt"+tokenTransfer + " wl1" + wantedL1GasFee.toString() + (execRequest ? " bf"+bonderFee.toString() : " wd"),
+                amount, id, minOutAmount, tokenTransfer, wantedL1GasFee, expectDepositFailure, expectExecFailure,
                 followUp: execRequest ? { bonderFee } : "withdraw"
               })
             }
@@ -124,7 +127,7 @@ describe("BridgeWhenCheap", function () {
 
     for (const acc of accounts) {
       await token.connect(acc).mint(initialAccountTokenBalance);
-      await token.connect(acc).approve(bwc.address, initialAccountTokenBalance);
+      await token.connect(acc).approve(bwc.address, initialAllowance);
     }
 
     const initialNativeBalance = await accounts[0].getBalance();
@@ -139,14 +142,14 @@ describe("BridgeWhenCheap", function () {
     });
 
     for (const tc of testPermutations()) {
-      it("end2end workflow " + (tc.expectSuccessDeposit && tc.expectSuccessExec ? "success" : "failure") + " " + tc.desc, async () => {
+      it("end2end workflow " + (tc.expectDepositFailure && tc.expectExecFailure ? "success" : "failure") + " " + tc.desc, async () => {
         const { bwc, owner, accounts, initialNativeBalance, token, fakeL2AmmWrapper} = await loadFixture(fixture);
         const [sender, receiver] = accounts;
 
 
         // ======================== deposit
 
-        const { id, amount, tokenTransfer, minOutAmount, wantedL1GasFee, followUp, expectSuccessDeposit, expectSuccessExec } = tc;
+        const { id, amount, tokenTransfer, minOutAmount, wantedL1GasFee, followUp, expectDepositFailure, expectExecFailure } = tc;
 
         if (tokenTransfer) {
           expect(await token.balanceOf(sender.address)).to.equal(initialAccountTokenBalance);
@@ -160,8 +163,8 @@ describe("BridgeWhenCheap", function () {
           .connect(sender)
           .deposit(id, whichTokenAddr, tokenAmount, receiver.address, wantedL1GasFee, minOutAmount, { value: nativeEtherAmount });
         
-        if (!expectSuccessDeposit) {
-          await expect(depositP).to.be.reverted;
+        if (expectDepositFailure !== undefined) {
+          await expect(depositP).to.be.revertedWith(expectDepositFailure);
           return;
         }
 
@@ -221,8 +224,8 @@ describe("BridgeWhenCheap", function () {
 
           const execP = bwc.executeRequest(sender.address, id, followUp.bonderFee, 0, 0, minOutAmount, 0);
 
-          if (!expectSuccessExec) {
-            await expect(execP).to.be.reverted;
+          if (expectExecFailure !== undefined) {
+            await expect(execP).to.be.revertedWith(expectExecFailure);
             return;
           }
           const exec = await execP;
@@ -259,7 +262,4 @@ describe("BridgeWhenCheap", function () {
     // todo. how do we test for werid interactions and specific edge hard-to-imagine cases?
 
   });
-
-  // todo. test when balance insufficient or approval isn't given.
-
 });
