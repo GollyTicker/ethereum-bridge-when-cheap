@@ -6,6 +6,7 @@ import { BridgeWhenCheap } from "../typechain-types";
 import { BridgeRequestStructOutput, BridgeRequestedEventObject, BridgeRequestWithdrawnEventObject, BridgeExecutionSubmittedEventObject } from "../typechain-types/contracts/BridgeWhenCheap.sol/BridgeWhenCheap";
 import { SwapAndSendEventObject } from "../typechain-types/contracts/test/Fake_L2_AmmWrapper";
 import { parseUnits } from "ethers/lib/utils";
+import exp from "constants";
 
 const addressZero = constants.AddressZero;
 
@@ -412,8 +413,42 @@ describe("BridgeWhenCheap", function () {
         );
       // token balances don't change here, because the token transfer is done by the fakeL2AmmWrapper.
 
-      // todo. continue with owner-withdrawals, change both fees,
-      // more deposits and withdraws and executions (some which were submitted before fee change).
+      // owner withdraws all service fee except l2gasfees.
+      expect(await bwc.collectedServiceFeeExcludingGas()).to.equal(heldFeePerRequest * 5);
+
+      await expect(bwc.ownerWithdraw(heldFeePerRequest * 5))
+          .to.changeEtherBalances([bwc, owner], [-heldFeePerRequest*5, heldFeePerRequest*5]);
+
+      expect(await bwc.collectedServiceFeeExcludingGas()).to.equal(0);
+      await expect(bwc.ownerWithdraw(1)).to.be.revertedWith(/Cannot withdraw more funds than the collected non gas service fees/);
+
+      const newL2ExecGasFeeDeposit = l2GasfeeDeposit * 3;
+      const newServiceFee = serviceFee * 2;
+      await expect(bwc.setL2execGasFeeDeposit(serviceFee + 1))
+        .to.be.revertedWith(/Service fee must cover at least the execution gas requirement/);
+
+      expect(await bwc.setL2execGasFeeDeposit(newL2ExecGasFeeDeposit));
+      expect(await bwc.setserviceFee(newServiceFee));
+
+      expect(await bwc.serviceFee()).to.equal(newServiceFee);
+      expect(await bwc.l2execGasFeeDeposit()).to.equal(newL2ExecGasFeeDeposit);
+
+      // make new deposits
+      await expect(
+        bwc.connect(acc2).deposit(6, token.address, 400, acc1.address, 20, 0, { value: newServiceFee })
+      ).to.changeEtherBalances([acc2, bwc], [-newServiceFee, newServiceFee])
+      .to.changeTokenBalances(token, [acc2, bwc], [-400, 400]);
+
+
+      // execute requests. The fees are equal to whatever they were during time of deposit.
+      await expect(
+        bwc.executeRequest(acc1.address, 1, 30, 0, 0, 0, 0)
+      ).to.changeEtherBalances([bwc, fakeL2AmmWrapper, owner],[-(5000-serviceFee)-l2GasfeeDeposit, 5000-serviceFee, l2GasfeeDeposit]);
+      await expect(
+        bwc.executeRequest(acc2.address, 6, 20, 0, 0, 0, 0)
+      ).to.changeEtherBalances([bwc, fakeL2AmmWrapper, owner],[-newL2ExecGasFeeDeposit, 0, newL2ExecGasFeeDeposit]);
+
+      // todo. continue more deposits and withdraws and executions (some which were submitted before fee change).
     });
 
   });
