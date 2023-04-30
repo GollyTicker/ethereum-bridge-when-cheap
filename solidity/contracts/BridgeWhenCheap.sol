@@ -54,7 +54,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
 
     // solhint-disable-next-line
     constructor(
-        uint256 _l2execGasFeeDeposit, // todo. find out what a reasonable initial value should be.
+        uint256 _l2execGasFeeDeposit,
         uint256 _serviceFee,
         uint256 _layer1ChainId
     ) {
@@ -64,12 +64,20 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         checkFeeInvariants();
     }
 
-    // some constraints:
-    // changes in servicefee + exec-gas should only influence new deposits but not withdrawals of previous deposits
-    // request executions. also, checkFeeInvariants is always true before and after txs.
-    // Also, we want to make sure, that whatever happens, the deposits cannot be drained. currently, with servicefee changes
-    // this might be possible. We have that the sum of all this.balance >= sum(request[*].amount) + gasstuff
-    // We want to prove at least those via formal verification.
+    /*
+    ============== INVARIANTS ==============
+
+    * each deposit() will leave (serviceFee-l2execGasFeeDeposit) in the smart contract which can be withdrawn by the contract owner.
+        * the owner cannot withdraw anymore than that.
+        * the remaining l2exexGasFeeDeposit will be refunded to the executeRequest caller (also owner) when the execute a request.
+        * If the request is withdrawn, the gas fee will be refunded to the original requestor.
+    * a deposit() populates a BridgeRequest into the smart contract. They can only be
+        (a) withdrawn by the requestor (receiving all funds except (serviceFee-l2execGasFeeDeposit) in ether back) or
+        (b) bridged to L1 via the Hop Bridge L2AmmWrapper where at least amountOutMit will be transferred.
+    * serviceFee - l2execGasFeeDeposit >= 0
+    * When the serviceFee or l2execGasFeeDeposit is changed, previous requests are not influenced and they'll be executed with the fees
+      acknowledged at that time.
+    */
 
     // ===================== ESSENTIAL FUNCTIONS
 
@@ -202,13 +210,11 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     function executeRequest(
         address requestor,
         uint256 requestId,
-        // these fields are calculated just before executing the request to find these parameters via "populateSendTx"
+        // bonder fee is calculated via Hop SDK v1 "populateSendTx" just before initiating this tx.
+        // We only need the bonder fee and we only have limited
+        // room there, as the minimum amoutOut has already been promised to the user.
         uint256 bonderFee,
-        uint256 amountOutMin,
-        uint256 deadline,
-        uint256 destAmountOutMin, // todo. this parameter may conflict with the amount out min in the bridged request.
-        // todo. remove this and only keep the deadline. We're only making a single guarantee and that one should suffice.
-        uint256 destDeadline
+        uint256 destAmmDeadline
     ) external onlyOwner nonReentrant {
         // CHECKS
         BridgeRequest memory toBeBridgedRequest = pendingRequests[requestor][
@@ -220,7 +226,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             "Bonder fee cannot exceed amount."
         );
         require(
-            toBeBridgedRequest.amount - bonderFee >= amountOutMin,
+            toBeBridgedRequest.amount - bonderFee >= toBeBridgedRequest.amountOutMin,
             "Guaranteed destination amount cannot be more than the to-be-bridged-amount after fees."
         );
 
@@ -238,10 +244,10 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             toBeBridgedRequest.destination,
             toBeBridgedRequest.amount,
             bonderFee,
-            amountOutMin,
-            deadline,
-            destAmountOutMin,
-            destDeadline
+            0 /* amountOutMin */,
+            0 /* ammDeadline */,
+            toBeBridgedRequest.amountOutMin,
+            destAmmDeadline
         );
         // refund execution gas to caller
         require(

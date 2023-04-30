@@ -1,12 +1,10 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { BigNumber, BigNumberish, ContractTransaction, constants } from "ethers";
+import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 import { BridgeWhenCheap } from "../typechain-types";
-import { BridgeRequestStructOutput, BridgeRequestedEventObject, BridgeRequestWithdrawnEventObject, BridgeExecutionSubmittedEventObject } from "../typechain-types/contracts/BridgeWhenCheap.sol/BridgeWhenCheap";
-import { SwapAndSendEventObject } from "../typechain-types/contracts/test/Fake_L2_AmmWrapper";
-import { parseUnits } from "ethers/lib/utils";
-import exp from "constants";
+import { BridgeExecutionSubmittedEventObject, BridgeRequestStructOutput, BridgeRequestWithdrawnEventObject, BridgeRequestedEventObject } from "../typechain-types/contracts/BridgeWhenCheap.sol/BridgeWhenCheap";
 
 const addressZero = constants.AddressZero;
 
@@ -124,11 +122,9 @@ function testPermutations(): DepositTestCase[] {
 }
 
 async function GetEventByName<T>(name: string, tx: ContractTransaction, sourceContract?: string): Promise<T> {
-  //console.log("getting for name =============================================",name);
   const filteredEvents = (await tx.wait()).events?.filter((x) => {
     return x.event !== undefined ? x.event === name : x.address === sourceContract
   });
-  //console.log("filtered:", filteredEvents); // todo. remove these console.log(s)
   return filteredEvents?.[0].args as T;
 }
 
@@ -187,7 +183,7 @@ describe("BridgeWhenCheap", function () {
       allRequestsEmpty(bwc, [owner].concat(accounts));
     });
 
-    for (const tc of testPermutations().slice(0, 0)) {
+    for (const tc of testPermutations()) {
 
       it("end2end workflow " + (tc.expectDepositFailure && tc.expectExecFailure ? "success" : "failure") + " " + tc.desc, async () => {
         const { bwc, owner, accounts, initialNativeBalance, token, fakeL2AmmWrapper} = await loadFixture(fixtureWithTokenSupportAndApprovals);
@@ -289,17 +285,23 @@ describe("BridgeWhenCheap", function () {
           // ======================== execute request
 
           const ownerBalanceBeforeExec = await owner.getBalance();
-          const nativeEtherSent = tokenTransfer ? 0 : request.amount;
+          const nativeEtherSent = tokenTransfer ? BigNumber.from(0) : request.amount;
 
           const requestorNativeBalance = await sender.getBalance();
           const requestorTokenBalance = await token.balanceOf(sender.address);
 
-          const execP = bwc.executeRequest(sender.address, id, followUp.bonderFee, 0, 0, minOutAmount, 0);
+          const execP = bwc.executeRequest(sender.address, id, followUp.bonderFee, 0);
 
           if (expectExecFailure !== undefined) {
             await expect(execP).to.be.revertedWith(expectExecFailure);
             return;
           }
+
+          await expect(execP).to.changeEtherBalances(
+              [bwc, fakeL2AmmWrapper, owner],
+              [nativeEtherSent.add(l2GasfeeDeposit).mul(-1),nativeEtherSent, l2GasfeeDeposit]
+            );
+          // fakeL2AmmWrapper doesn't retrieve the tokens it would take in the real world.
 
           const exec = await execP;
           
@@ -335,11 +337,6 @@ describe("BridgeWhenCheap", function () {
         }
       });
     }
-
-    // todo. product arguments test. test, that all combinations of valid and invalid arguments don't break the system.
-
-    // todo. how do we test for werid interactions and specific edge hard-to-imagine cases?
-
   });
 
   describe("Diverse Workflows", async () => {
@@ -401,12 +398,12 @@ describe("BridgeWhenCheap", function () {
       expect(isEmpty(await bwc.pendingRequests(acc2.address, 3))).to.be.true;
 
       // and finally executions
-      await expect(bwc.executeRequest(acc1.address,0,50,0,0,0,0))
+      await expect(bwc.executeRequest(acc1.address,0,50,0))
         .to.changeEtherBalances(
           [bwc, owner, fakeL2AmmWrapper],
           [-(500-heldFeePerRequest),l2GasfeeDeposit, 500-serviceFee]
         );
-      await expect(bwc.executeRequest(acc2.address,5,50,0,0,0,0))
+      await expect(bwc.executeRequest(acc2.address,5,10,0))
         .to.changeEtherBalances(
           [bwc, owner, fakeL2AmmWrapper],
           [-l2GasfeeDeposit, l2GasfeeDeposit, 0]
@@ -424,6 +421,7 @@ describe("BridgeWhenCheap", function () {
 
       const newL2ExecGasFeeDeposit = l2GasfeeDeposit * 3;
       const newServiceFee = serviceFee * 2;
+      const newHeldFeePerRequest = newServiceFee - newL2ExecGasFeeDeposit;
       await expect(bwc.setL2execGasFeeDeposit(serviceFee + 1))
         .to.be.revertedWith(/Service fee must cover at least the execution gas requirement/);
 
@@ -442,10 +440,10 @@ describe("BridgeWhenCheap", function () {
 
       // execute requests. The fees are equal to whatever they were during time of deposit.
       await expect(
-        bwc.executeRequest(acc1.address, 1, 30, 0, 0, 0, 0)
+        bwc.executeRequest(acc1.address, 1, 30, 0)
       ).to.changeEtherBalances([bwc, fakeL2AmmWrapper, owner],[-(5000-serviceFee)-l2GasfeeDeposit, 5000-serviceFee, l2GasfeeDeposit]);
       await expect(
-        bwc.executeRequest(acc2.address, 6, 20, 0, 0, 0, 0)
+        bwc.executeRequest(acc2.address, 6, 20, 0)
       ).to.changeEtherBalances([bwc, fakeL2AmmWrapper, owner],[-newL2ExecGasFeeDeposit, 0, newL2ExecGasFeeDeposit]);
 
       // sometimes the owners want's to increase the depoit
@@ -453,7 +451,6 @@ describe("BridgeWhenCheap", function () {
         .to.changeEtherBalances([owner, bwc], [-5, 5]);
 
       // more deposits, withdrawals and executions
-
       expect(await bwc.connect(acc1)
         .deposit(10,token.address,150,acc1.address,30,140,{value: newServiceFee})
       );
@@ -468,22 +465,25 @@ describe("BridgeWhenCheap", function () {
         .to.changeEtherBalances([bwc,acc1],[-newL2ExecGasFeeDeposit,newL2ExecGasFeeDeposit])
         .to.changeTokenBalances(token, [bwc, acc1],[-150, 150]);
 
-      // too high bonder fee set.
-      const r = await bwc.pendingRequests(acc2.address,10);
-      console.log("peding request", r);
-      const bf = 150;
-      console.log("calc:", r.amount.sub(bf));
-      console.log("calc:", r.amountOutMin);
-      await expect(bwc.executeRequest(acc2.address,10,bf,0,0,140,0))
+      await expect(bwc.executeRequest(acc2.address,10,11,0))
         .to.be.revertedWith(/Guaranteed destination amount cannot be more than the to-be-bridged-amount after fees/);
-      // await expect(bwc.executeRequest(acc2.address,11,41,0,0,140,0))
-      //   .to.be.revertedWith(/Guaranteed destination amount cannot be more than the to-be-bridged-amount after fees/);
+      await expect(bwc.executeRequest(acc2.address,11,41,0))
+        .to.be.revertedWith(/Guaranteed destination amount cannot be more than the to-be-bridged-amount after fees/);
 
-      // await expect(bwc.executeRequest(acc2.address,10,10,0,0,140,0));
-      // await expect(bwc.executeRequest(acc2.address,11,40,0,0,140,0));
+      expect(await bwc.executeRequest(acc2.address,10,10,0));
+      expect(await bwc.executeRequest(acc2.address,11,40,0));
 
-      // todo. continue more deposits and withdraws and executions (some which were submitted before fee change).
+      // owner withdraws their service fee.
+      expect(await bwc.collectedServiceFeeExcludingGas()).to.equal(newHeldFeePerRequest * 4);
+      await expect(bwc.ownerWithdraw(newHeldFeePerRequest * 4))
+          .to.changeEtherBalances([bwc, owner], [-newHeldFeePerRequest*4, newHeldFeePerRequest*4]);
     });
 
   });
+
+  // todo. add tests for each function testing all edge-cases.
+
+  // todo. product arguments test. test, that all combinations of valid and invalid arguments don't break the system.
+
+  // todo. how do we test for werid interactions and specific edge hard-to-imagine cases?
 });
