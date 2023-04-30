@@ -1,8 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { BigNumber, BigNumberish, ContractTransaction } from "ethers";
-import { parseUnits } from "ethers/lib/utils";
-import { fixture, heldFeePerRequest, initialAccountTokenBalance, initialAllowance, isEmpty, l2GasfeeDeposit, nativeEther, serviceFee } from "./shared";
+import { fixtureBarebone, heldFeePerRequest, initialAllowance, isEmpty, l2GasfeeDeposit, nativeEther, serviceFee } from "./shared";
 
 
 /*
@@ -24,8 +22,6 @@ Ensure that two things happen:
   * `EXPECT` CAN ONLY PROCESS VALUES or PROMISES, BUT NOT FUNCTIONS ()) => { ... promise ... }!
 
 */
-
-const fixtureBarebone = () => fixture(false, false)
 
 describe("Diverse Workflows", async () => {
   it("supports an example workflow of user txs and owner mgmt txs", async () => {

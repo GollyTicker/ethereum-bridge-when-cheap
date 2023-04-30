@@ -1,9 +1,9 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { BigNumber, BigNumberish, ContractTransaction } from "ethers";
+import { BigNumber, BigNumberish } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { BridgeExecutionSubmittedEventObject, BridgeRequestWithdrawnEventObject, BridgeRequestedEventObject } from "../typechain-types/contracts/BridgeWhenCheap.sol/BridgeWhenCheap";
-import { BridgeRequest, GetEventByName, allRequestsEmpty, fixture, heldFeePerRequest, initialAccountTokenBalance, initialAllowance, isEmpty, l2GasfeeDeposit, nativeEther, serviceFee, toStructOutput, totalPaidGasFeesOfTx } from "./shared";
+import { BridgeRequest, GetEventByName, allRequestsEmpty, fixturePreconfigured, initialAccountTokenBalance, initialAllowance, isEmpty, l2GasfeeDeposit, nativeEther, serviceFee, toStructOutput, totalPaidGasFeesOfTx } from "./shared";
 
 
 interface DepositTestCase {
@@ -39,18 +39,16 @@ Ensure that two things happen:
 */
 
 
-const fixtureWithTokenSupportAndApprovals = () => fixture(true, true)
-
 describe("Deposits", function () {
   it("initially empty", async function () {
-    const { bwc, owner, accounts } = await loadFixture(fixtureWithTokenSupportAndApprovals);
+    const { bwc, owner, accounts } = await loadFixture(fixturePreconfigured);
     allRequestsEmpty(bwc, [owner].concat(accounts));
   });
 
   for (const tc of testPermutations()) {
 
     it("end2end workflow " + (tc.expectDepositFailure && tc.expectExecFailure ? "success" : "failure") + " " + tc.desc, async () => {
-      const { bwc, owner, accounts, initialNativeBalance, token, fakeL2AmmWrapper} = await loadFixture(fixtureWithTokenSupportAndApprovals);
+      const { bwc, owner, accounts, initialNativeBalance, token, fakeL2AmmWrapper} = await loadFixture(fixturePreconfigured);
       const [sender, receiver] = accounts;
 
 

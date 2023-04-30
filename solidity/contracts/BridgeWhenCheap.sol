@@ -103,7 +103,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         require(msg.sender != address(0), "Sender may not be 0 address");
         require(
             destination != address(0),
-            "Destination address may not be 0 address"
+            "Destination address may not be 0 address."
         );
         require(
             wantedL1GasPrice > 0,
@@ -165,7 +165,13 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         // INTERACTIONS
         // Receive deposit. Native ether happens automatically. Token transfer needs to be done explicitly and requires approval.
         if (isTokenTransfer) {
-            require(tokenOrEtherAddr.transferFrom(msg.sender, address(this), sentAmount));
+            require(
+                tokenOrEtherAddr.transferFrom(
+                    msg.sender,
+                    address(this),
+                    sentAmount
+                )
+            );
         }
     }
 
@@ -173,7 +179,9 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     function withdraw(uint256 requestId) external nonReentrant {
         // CHECKS
         // This is a copy, not a reference.
-        BridgeRequest memory obsoleteRequest = pendingRequests[msg.sender][requestId];
+        BridgeRequest memory obsoleteRequest = pendingRequests[msg.sender][
+            requestId
+        ];
         require(isDefined(obsoleteRequest), "No request to withdraw.");
         assert(obsoleteRequest.source == msg.sender);
 
@@ -194,10 +202,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         require(payable(msg.sender).send(withdrawNativeEtherAmount));
         if (obsoleteRequest.isTokenTransfer) {
             require(
-                obsoleteRequest.token.transfer(
-                    msg.sender,
-                    withdrawTokenAmount
-                )
+                obsoleteRequest.token.transfer(msg.sender, withdrawTokenAmount)
             );
         }
         emit BridgeRequestWithdrawn(requestId, obsoleteRequest);
@@ -226,7 +231,8 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             "Bonder fee cannot exceed amount."
         );
         require(
-            toBeBridgedRequest.amount - bonderFee >= toBeBridgedRequest.amountOutMin,
+            toBeBridgedRequest.amount - bonderFee >=
+                toBeBridgedRequest.amountOutMin,
             "Guaranteed destination amount cannot be more than the to-be-bridged-amount after fees."
         );
 
@@ -262,6 +268,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     // Allow the owner to fund ether for gas fees, if somehow the L2 gas prices rise a lot and user gas deposits aren't enough.
     /* solhint-disable */
     function ownerDeposit() external payable onlyOwner {}
+
     /* solhint-enable */
 
     // Collect service fee.
@@ -288,11 +295,14 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
 
     // If Hop Bridge is extended, we can add new tokens here.
     // We always want to point to the L2_AmmWrapper contract for the given L2 and token.
-    function addSupportForNewToken(IERC20 token, address tokenHopBridge)
-        external
-        onlyOwner
-    {
-        require(tokenHopBridge != address(0), "Hop bridge contract address must not be 0 address.");
+    function addSupportForNewToken(
+        IERC20 token,
+        address tokenHopBridge
+    ) external onlyOwner {
+        require(
+            tokenHopBridge != address(0),
+            "Hop bridge contract address must not be 0 address."
+        );
         require(
             bridgeContractOf[token] == address(0),
             "Token already supported."
@@ -302,7 +312,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
 
     // ====================== HELPER FUNCTIONS
     // todo. this should create an error with scribble.
-    /// #if_succeeds "service fee >= l2gasFeeDeposit" serviceFee > l2execGasFeeDeposit; 
+    /// #if_succeeds "service fee >= l2gasFeeDeposit" serviceFee > l2execGasFeeDeposit;
     function checkFeeInvariants() internal view {
         require(
             serviceFee >= l2execGasFeeDeposit,
@@ -315,11 +325,9 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     }
 
     // Returns true iff the request is not it's default zero-value.
-    function isDefined(BridgeRequest memory request)
-        internal
-        pure
-        returns (bool)
-    {
+    function isDefined(
+        BridgeRequest memory request
+    ) internal pure returns (bool) {
         return request.source != address(0);
     }
 }

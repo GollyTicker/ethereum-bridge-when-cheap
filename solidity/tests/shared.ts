@@ -1,8 +1,9 @@
 import { expect } from "chai";
 import { BigNumber, ContractTransaction, constants } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { BridgeWhenCheap } from "../typechain-types";
 import { BridgeRequestStructOutput } from "../typechain-types/contracts/BridgeWhenCheap.sol/BridgeWhenCheap";
+import { parseUnits } from "ethers/lib/utils";
 
 export const l2GasfeeDeposit = 3;
 export const serviceFee = 10;
@@ -22,6 +23,15 @@ export async function fixture(addTokensSupport: boolean, addTokenApprovals: bool
   const bwc = await (await ethers.getContractFactory("BridgeWhenCheap")).deploy(l2GasfeeDeposit, serviceFee, chainId);
   const token = await (await ethers.getContractFactory("TestToken")).deploy();
 
+  // impersoante zero address
+  await network.provider.request({
+    method: "hardhat_impersonateAccount",
+    params: [addressZero]
+  });
+  const addressZeroSigner = await ethers.getSigner(addressZero);
+  // populate zero address with some initial ether from the owner
+  await accountsAndOwner[0].sendTransaction({value: parseUnits("1","ether"), to: addressZero});
+
   if (addTokensSupport) {
     await bwc.addSupportForNewToken(nativeEther, fakeL2AmmWrapper.address);
     await bwc.addSupportForNewToken(token.address, fakeL2AmmWrapper.address);
@@ -34,7 +44,7 @@ export async function fixture(addTokensSupport: boolean, addTokenApprovals: bool
 
   const initialNativeBalance = await accounts[0].getBalance();
 
-  return { bwc: bwc, owner: accountsAndOwner[0], accounts, initialNativeBalance, token, fakeL2AmmWrapper };
+  return { bwc: bwc, owner: accountsAndOwner[0], accounts, initialNativeBalance, token, fakeL2AmmWrapper, addressZeroSigner };
 }
 
 
@@ -48,6 +58,9 @@ export interface BridgeRequest {
   wantedL1GasPrice: BigNumber;
   l2execGasFeeDeposit: BigNumber;
 };
+
+export const fixtureBarebone = () => fixture(false, false)
+export const fixturePreconfigured = () => fixture(true, true)
 
 // transform simple object types to the output type from hardhat JS framework.
 export function toStructOutput(simpleObject: BridgeRequest): BridgeRequestStructOutput {
