@@ -206,7 +206,8 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         uint256 bonderFee,
         uint256 amountOutMin,
         uint256 deadline,
-        uint256 destAmountOutMin,
+        uint256 destAmountOutMin, // todo. this parameter may conflict with the amount out min in the bridged request.
+        // todo. remove this and only keep the deadline. We're only making a single guarantee and that one should suffice.
         uint256 destDeadline
     ) external onlyOwner nonReentrant {
         // CHECKS
