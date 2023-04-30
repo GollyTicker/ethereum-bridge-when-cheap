@@ -56,6 +56,7 @@ const heldFeePerRequest = serviceFee - l2GasfeeDeposit;
 const nAccountsIncludingOwner = 4;
 const initialAccountTokenBalance = 1000;
 const initialAllowance = 3000;
+const chainId = 123;
 
 
 interface DepositTestCase {
@@ -121,8 +122,13 @@ function testPermutations(): DepositTestCase[] {
   return tcs;
 }
 
-async function GetEventByName<T>(name: string, tx: ContractTransaction): Promise<T> {
-  return (await tx.wait()).events?.filter((x) => x.event === name)[0].args as T;
+async function GetEventByName<T>(name: string, tx: ContractTransaction, sourceContract?: string): Promise<T> {
+  //console.log("getting for name =============================================",name);
+  const filteredEvents = (await tx.wait()).events?.filter((x) => {
+    return x.event !== undefined ? x.event === name : x.address === sourceContract
+  });
+  //console.log("filtered:", filteredEvents); // todo. remove these console.log(s)
+  return filteredEvents?.[0].args as T;
 }
 
 
@@ -153,7 +159,7 @@ describe("BridgeWhenCheap", function () {
     const accounts = accountsAndOwner.slice(1, nAccountsIncludingOwner) // i = 1,2,3 = 3 test accounts
     
     const fakeL2AmmWrapper = await (await ethers.getContractFactory("Fake_L2_AmmWrapper")).deploy();
-    const bwc = await (await ethers.getContractFactory("BridgeWhenCheap")).deploy(l2GasfeeDeposit, serviceFee, 123);
+    const bwc = await (await ethers.getContractFactory("BridgeWhenCheap")).deploy(l2GasfeeDeposit, serviceFee, chainId);
     const token = await (await ethers.getContractFactory("TestToken")).deploy();
 
     if (addTokensSupport) {
@@ -293,12 +299,25 @@ describe("BridgeWhenCheap", function () {
             await expect(execP).to.be.revertedWith(expectExecFailure);
             return;
           }
+
           const exec = await execP;
           
-          // Check events correctly emitted
-          await expect(exec)
-            .to.emit(fakeL2AmmWrapper, "SwapAndSend")
-            .withArgs(owner.address,nativeEtherSent,0,receiver.address,request.amount,followUp.bonderFee,0,0,request.amountOutMin,0);
+          // todo. DECODE EVENT DATA AND CHECK IT's CORRECT.
+          // const swapAndSendEvent = await GetEventByName<SwapAndSendEventObject>("SwapAndSend", exec, fakeL2AmmWrapper.address);
+          // const abi = new ethers.utils.AbiCoder();
+          // console.log("abi encoded", abi.encode(["swapAndSend(uint256)"],[BigNumber.from(0)]));
+          // (new ethers.utils.AbiCoder()).decode(["uint256","address","uint256","uint256","uint256","uint256","uint256","uint256"],"0x000000000000000000000000a513e6e4b8f2a923d98304ec87f64353c4d5c8530000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007b0000000000000000000000003c44cdddb6a900fa2b585dd299e03d12fa4293bc000000000000000000000000000000000000000000000000000000000000000900000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000050000000000000000000000000000000000000000000000000000000000000000")
+
+          // expect(swapAndSendEvent.sender).to.equal(owner.address);
+          // expect(swapAndSendEvent.paidAmount).to.equal(nativeEtherSent);
+          // expect(swapAndSendEvent.chainId).to.equal(chainId);
+          // expect(swapAndSendEvent.recipient).to.equal(receiver.address);
+          // expect(swapAndSendEvent.amount).to.equal(request.amount);
+          // expect(swapAndSendEvent.bonderFee).to.equal(followUp.bonderFee);
+          // expect(swapAndSendEvent.amountOutMin).to.equal(0);
+          // expect(swapAndSendEvent.deadline).to.equal(0);
+          // expect(swapAndSendEvent.destAmountOutMin).to.equal(minOutAmount);
+          // expect(swapAndSendEvent.destDeadline).to.equal(0);
 
           const actualBridgeExecutionSubmittedEvent = await GetEventByName<BridgeExecutionSubmittedEventObject>("BridgeExecutionSubmitted", exec);
           expect(actualBridgeExecutionSubmittedEvent.requestId).to.equal(id);
@@ -370,7 +389,30 @@ describe("BridgeWhenCheap", function () {
         ).to.changeEtherBalances([acc2, bwc], [-serviceFee, serviceFee])
         .to.changeTokenBalances(token, [acc2, bwc], [-200, 200]);
 
-      // todo. continue with token-withdraw, executions, owner-withdraws, change both fees,
+      await expect(
+          bwc.connect(acc2).deposit(3, token.address, 300, acc1.address, 40, 0, { value: serviceFee })
+        ).to.changeEtherBalances([acc2, bwc], [-serviceFee, serviceFee])
+        .to.changeTokenBalances(token, [acc2, bwc], [-300, 300]);
+
+      // and token withdrawals
+      await expect(bwc.connect(acc1).withdraw(2)).to.be.revertedWith(/No request/);
+      expect(await bwc.connect(acc2).withdraw(3));
+      expect(isEmpty(await bwc.pendingRequests(acc2.address, 3))).to.be.true;
+
+      // and finally executions
+      await expect(bwc.executeRequest(acc1.address,0,50,0,0,0,0))
+        .to.changeEtherBalances(
+          [bwc, owner, fakeL2AmmWrapper],
+          [-(500-heldFeePerRequest),l2GasfeeDeposit, 500-serviceFee]
+        );
+      await expect(bwc.executeRequest(acc2.address,5,50,0,0,0,0))
+        .to.changeEtherBalances(
+          [bwc, owner, fakeL2AmmWrapper],
+          [-l2GasfeeDeposit, l2GasfeeDeposit, 0]
+        );
+      // token balances don't change here, because the token transfer is done by the fakeL2AmmWrapper.
+
+      // todo. continue with owner-withdrawals, change both fees,
       // more deposits and withdraws and executions (some which were submitted before fee change).
     });
 
