@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./IBridgeWhenCheap.sol";
 
@@ -188,7 +189,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         delete pendingRequests[msg.sender][requestId];
 
         // INTERACTIONS
-        require(payable(msg.sender).send(withdrawNativeEtherAmount));
+        Address.sendValue(payable(msg.sender), withdrawNativeEtherAmount);
         if (obsoleteRequest.isTokenTransfer) {
             require(
                 obsoleteRequest.token.transfer(msg.sender, withdrawTokenAmount)
@@ -245,8 +246,9 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             destAmmDeadline
         );
         // refund execution gas to caller
-        require(
-            payable(msg.sender).send(toBeBridgedRequest.l2execGasFeeDeposit)
+        Address.sendValue(
+            payable(msg.sender),
+            toBeBridgedRequest.l2execGasFeeDeposit
         );
 
         emit BridgeExecutionSubmitted(requestId, toBeBridgedRequest);
@@ -273,7 +275,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             "Cannot withdraw more funds than the collected non gas service fees."
         );
         collectedServiceFeeExcludingGas -= amount;
-        require(payable(msg.sender).send(amount));
+        Address.sendValue(payable(msg.sender), amount);
     }
 
     // If the L2 network gas prices rise/fall for a longer duration, we can increase/decrease the gas deposit the users have to make.
