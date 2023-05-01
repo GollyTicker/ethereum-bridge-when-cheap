@@ -93,7 +93,7 @@ export function DepositWorkflow (props: { global: GlobalProps }) {
 
   // useInterval(updateNeedsApproval, 5 * 1000)
 
-  const [wantedGasPriceString] = useState('20')
+  const [wantedGasPriceString] = useState('30')
   const [wantedGasPrice, setWantedGasPrice] = useState(parseUnits(wantedGasPriceString, 'gwei'))
 
   useEffect(() => {

@@ -14,7 +14,6 @@ module.exports = {
   },
   plugins: ["@typescript-eslint"],
   rules: {
-    code: 110,
     "comma-dangle": "off",
     quotes: "off",
     semi: "off",
