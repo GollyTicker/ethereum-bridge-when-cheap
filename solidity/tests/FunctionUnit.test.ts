@@ -1,7 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { addressZero, fixtureBarebone, fixturePreconfigured, initialAllowance, l2GasfeeDeposit, nativeEther, serviceFee, withReentrancy as testReentrancyAttack } from "./shared";
-import { ethers } from "hardhat";
 
 
 /*

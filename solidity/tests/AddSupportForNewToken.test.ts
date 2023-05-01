@@ -1,6 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { BigNumber, constants } from "ethers";
+import { constants } from "ethers";
 import { ethers } from "hardhat";
 import { BridgeWhenCheap } from "../typechain-types";
 
