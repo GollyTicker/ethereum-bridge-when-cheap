@@ -110,7 +110,7 @@ describe("Diverse Workflows", async () => {
       .to.be.revertedWith(/Service fee must cover at least the execution gas requirement/);
 
     expect(await bwc.setL2execGasFeeDeposit(newL2ExecGasFeeDeposit));
-    expect(await bwc.setserviceFee(newServiceFee));
+    expect(await bwc.setServiceFee(newServiceFee));
 
     expect(await bwc.serviceFee()).to.equal(newServiceFee);
     expect(await bwc.l2execGasFeeDeposit()).to.equal(newL2ExecGasFeeDeposit);

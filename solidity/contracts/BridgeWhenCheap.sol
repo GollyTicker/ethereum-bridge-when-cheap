@@ -5,18 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// A request of what is to be bridged from L2 to L1
-// together with the wanted L1 gas price at which this should be executed.
-struct BridgeRequest {
-    address source;
-    address destination;
-    bool isTokenTransfer;
-    IERC20 token;
-    uint256 amount;
-    uint256 amountOutMin;
-    uint256 wantedL1GasPrice;
-    uint256 l2execGasFeeDeposit; // we also store this here, because the l2execGasFeeDeposit amount might change during the lifetime of the contract.
-}
+import "./IBridgeWhenCheap.sol";
 
 // todo. create a contact email
 /// @custom:security-contact bridge-when-cheap@gmail.com
@@ -220,7 +209,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
         // room there, as the minimum amoutOut has already been promised to the user.
         uint256 bonderFee,
         uint256 destAmmDeadline
-    ) external onlyOwner nonReentrant {
+    ) external nonReentrant onlyOwner {
         // CHECKS
         BridgeRequest memory toBeBridgedRequest = pendingRequests[requestor][
             requestId
@@ -272,7 +261,13 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     /* solhint-enable */
 
     // Collect service fee.
-    function ownerWithdraw(uint256 amount) external onlyOwner nonReentrant {
+    function ownerWithdraw(
+        uint256 amount
+    )
+        external
+        onlyOwner
+    /* no eentrancy check here, because function is resillient to it and becaue this couldn't be tested in coverage. */
+    {
         require(
             collectedServiceFeeExcludingGas >= amount,
             "Cannot withdraw more funds than the collected non gas service fees."
@@ -288,7 +283,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     }
 
     // Change service fee for future deposits in case dapp hosting costs change etc.
-    function setserviceFee(uint256 amount) external onlyOwner {
+    function setServiceFee(uint256 amount) external onlyOwner {
         serviceFee = amount;
         checkFeeInvariants();
     }
@@ -330,18 +325,4 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     ) internal pure returns (bool) {
         return request.source != address(0);
     }
-}
-
-// Sourced from: https://github.com/hop-protocol/contracts/blob/v1/contracts/bridges/L2_AmmWrapper.sol#L58
-interface HopL2AmmWrapper {
-    function swapAndSend(
-        uint256 chainId,
-        address recipient,
-        uint256 amount,
-        uint256 bonderFee,
-        uint256 amountOutMin,
-        uint256 deadline,
-        uint256 destAmountOutMin,
-        uint256 destDeadline
-    ) external payable;
 }

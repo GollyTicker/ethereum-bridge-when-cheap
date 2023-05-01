@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { BigNumber, BigNumberish } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { BridgeExecutionSubmittedEventObject, BridgeRequestWithdrawnEventObject, BridgeRequestedEventObject } from "../typechain-types/contracts/BridgeWhenCheap.sol/BridgeWhenCheap";
-import { BridgeRequest, GetEventByName, allRequestsEmpty, fixturePreconfigured, initialAccountTokenBalance, initialAllowance, isEmpty, l2GasfeeDeposit, nativeEther, serviceFee, toStructOutput, totalPaidGasFeesOfTx } from "./shared";
+import { BridgeRequest, GetEventByName, allRequestsEmpty, fixturePreconfigured, heldFeePerRequest, initialAccountTokenBalance, initialAllowance, isEmpty, l2GasfeeDeposit, nativeEther, serviceFee, toStructOutput, totalPaidGasFeesOfTx } from "./shared";
 
 
 interface DepositTestCase {
@@ -196,6 +196,10 @@ describe("Deposits", function () {
         expect(await sender.getBalance()).equal(requestorNativeBalance);
         expect(await token.balanceOf(sender.address)).equal(requestorTokenBalance);
 
+        // =========== owner withdraws fees
+        expect(await bwc.collectedServiceFeeExcludingGas()).to.equal(heldFeePerRequest);
+        await expect(bwc.ownerWithdraw(heldFeePerRequest+1)).to.be.revertedWith(/Cannot withdraw more funds than the collected non gas service fees/);
+        expect(await bwc.ownerWithdraw(heldFeePerRequest));
       }
     });
   }

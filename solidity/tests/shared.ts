@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import { BigNumber, ContractTransaction, constants } from "ethers";
-import { ethers, network } from "hardhat";
-import { BridgeWhenCheap } from "../typechain-types";
-import { BridgeRequestStructOutput } from "../typechain-types/contracts/BridgeWhenCheap.sol/BridgeWhenCheap";
 import { parseUnits } from "ethers/lib/utils";
+import { ethers, network } from "hardhat";
+import { BridgeWhenCheap, Fake_L2_AmmWrapper, OwnerWithdrawAdversary, TestToken } from "../typechain-types";
+import { BridgeRequestStructOutput } from "../typechain-types/contracts/BridgeWhenCheap.sol/BridgeWhenCheap";
 
 export const l2GasfeeDeposit = 3;
 export const serviceFee = 10;
@@ -22,6 +22,7 @@ export async function fixture(addTokensSupport: boolean, addTokenApprovals: bool
   const fakeL2AmmWrapper = await (await ethers.getContractFactory("Fake_L2_AmmWrapper")).deploy();
   const bwc = await (await ethers.getContractFactory("BridgeWhenCheap")).deploy(l2GasfeeDeposit, serviceFee, chainId);
   const token = await (await ethers.getContractFactory("TestToken")).deploy();
+  const adversary = await (await ethers.getContractFactory("Adversary")).deploy(bwc.address);
 
   // impersoante zero address
   await network.provider.request({
@@ -44,7 +45,7 @@ export async function fixture(addTokensSupport: boolean, addTokenApprovals: bool
 
   const initialNativeBalance = await accounts[0].getBalance();
 
-  return { bwc: bwc, owner: accountsAndOwner[0], accounts, initialNativeBalance, token, fakeL2AmmWrapper, addressZeroSigner };
+  return { bwc, owner: accountsAndOwner[0], accounts, initialNativeBalance, token, fakeL2AmmWrapper, addressZeroSigner, adversary};
 }
 
 
@@ -96,4 +97,16 @@ export async function allRequestsEmpty(bwc: BridgeWhenCheap, accounts: { address
 export async function totalPaidGasFeesOfTx(tx: ContractTransaction): Promise<BigNumber> {
   const receipt = ethers.provider.getTransactionReceipt(tx.hash);
   return (await receipt).gasUsed.mul((await receipt).effectiveGasPrice);
+}
+
+export async function withReentrancy(
+  contract: TestToken | Fake_L2_AmmWrapper | OwnerWithdrawAdversary,
+  reFunc: "none" | "deposit" | "withdraw" | "executeRequest" | "ownerWithdraw",
+  bwc: BridgeWhenCheap,
+  func: () => Promise<ContractTransaction>
+) {
+  const enumNumber = ["none", "deposit", "withdraw", "executeRequest", "ownerWithdraw"].indexOf(reFunc);
+  await contract.setReentrancy(enumNumber, bwc.address);
+  await expect(func()).to.be.revertedWith(/ReentrancyGuard: reentrant call/);
+  await contract.setReentrancy(0 /* none */, bwc.address);
 }

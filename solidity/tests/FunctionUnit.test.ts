@@ -1,8 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { addressZero, fixtureBarebone, fixturePreconfigured, initialAllowance, nativeEther, serviceFee } from "./shared";
-import { ethers, network } from "hardhat";
-import { parseUnits } from "ethers/lib/utils";
+import { addressZero, fixtureBarebone, fixturePreconfigured, initialAllowance, l2GasfeeDeposit, nativeEther, serviceFee, withReentrancy as testReentrancyAttack } from "./shared";
+import { ethers } from "hardhat";
 
 
 /*
@@ -27,14 +26,11 @@ Ensure that two things happen:
 
 
 describe("Function Unit", function () {
-
-
-  describe("deposit", () => {
-    
     // we only test edge cases here, because the workflows already cover the success cases.
 
+  describe("deposit", () => {
     it("invalid preconditions", async () => {
-      const { bwc, accounts: [acc1, acc2], token, addressZeroSigner } = await loadFixture(fixturePreconfigured);
+      const { bwc, accounts: [acc1, acc2], token, addressZeroSigner, fakeL2AmmWrapper} = await loadFixture(fixturePreconfigured);
 
       await expect(bwc.deposit(0,nativeEther,0,addressZero,1,0,{value: 100}))
         .to.be.revertedWith(/Destination address may not be 0 address/);
@@ -61,14 +57,23 @@ describe("Function Unit", function () {
       await expect(bwc.deposit(2,nativeEther,0,acc1.address,1,100-serviceFee,{value: 100}))
         .to.be.revertedWith(/Request with the same id for the requestor already exists/);
 
-      await token.connect(acc2).decreaseAllowance(bwc.address,initialAllowance);
 
       // failed transfer
+      await token.connect(acc2).decreaseAllowance(bwc.address,initialAllowance);
       await expect(bwc.connect(acc2).deposit(0,token.address,100,acc2.address,1,0,{value: serviceFee}))
         .to.be.revertedWith(/ERC20: insufficient allowance/);
 
       // impersonate zero address
       await expect(bwc.connect(addressZeroSigner).deposit(0,nativeEther,0,acc1.address,10,0)).to.be.revertedWith(/Sender may not be 0 address/);
+    });
+
+    it("reentrancy attack", async () => {
+      const { bwc, accounts: [acc1], token} = await loadFixture(fixturePreconfigured);
+
+      await testReentrancyAttack(
+        token, "deposit", bwc,
+        () => bwc.connect(acc1).deposit(0, token.address, 1, acc1.address, 10, 0, {value: serviceFee})
+      );
     });
 
     it("uninitialized bridge", async () => {
@@ -82,11 +87,8 @@ describe("Function Unit", function () {
 
 
   describe("withdraw", () => {
-    
-    // we only test edge cases here, because the workflows already cover the success cases.
-
     it("invalid preconditions", async () => {
-      const { bwc, accounts: [acc1, acc2], token } = await loadFixture(fixturePreconfigured);
+      const { bwc, accounts: [acc1, acc2], token, adversary } = await loadFixture(fixturePreconfigured);
       for (let i=0;i < 4; i++) {
         expect(await bwc.connect(acc1).deposit(
           i,
@@ -101,15 +103,87 @@ describe("Function Unit", function () {
 
       await expect(bwc.connect(acc2).withdraw(0)).to.be.revertedWith(/No request to withdraw/);
       
-      for (let i=0;i < 4; i++) {
+      for (let i=0;i < 2; i++) {
         expect(await bwc.connect(acc1).withdraw(i));
       }
+
+      // reentrancy attack
+      await testReentrancyAttack(token, "withdraw", bwc,() => bwc.connect(acc1).withdraw(3));
+
+      // failed receive on withdraw.
+      await expect(adversary.callDepositAndWithdraw({value: 100}))
+        .to.be.revertedWithoutReason;
     });
   });
 
-  // todo. add tests for each function testing all edge-cases.
-  // executeRequest, ownerDeposit (non-owner), ownerWithdraw (non-owner)
-  // setL2execGasFeeDeposit (non-owner)
-  // setserviceFee (non-owner)
-  // setL2execGasFeeDeposit (non-owner)
+
+  describe("executeRequest", () => {
+    it("reentrancy attack", async () => {
+      const { bwc, owner, accounts: [acc1], fakeL2AmmWrapper, adversary } = await loadFixture(fixturePreconfigured);
+      
+      expect(await bwc.deposit(0,nativeEther,0,acc1.address,10,0,{value: 200}));
+
+      await expect(bwc.executeRequest(acc1.address,0,0,0))
+        .to.be.revertedWith(/No request to process/);
+
+      await testReentrancyAttack(fakeL2AmmWrapper, "executeRequest", bwc, () => bwc.executeRequest(owner.address,0,0,0));
+
+      await expect(bwc.connect(acc1).executeRequest(owner.address,0,0,0))
+        .to.be.revertedWith(/Ownable: caller is not the owner/);
+
+      await expect(bwc.executeRequest(owner.address,0,201,0))
+        .to.be.revertedWith(/Bonder fee cannot exceed amount/);
+
+      // failed receive gas refund
+      await bwc.transferOwnership(adversary.address);
+      await expect(adversary.callExecuteRequest(owner.address))
+        .to.be.revertedWithoutReason;
+    });
+  });
+
+
+  describe("owner management", () => {
+    it("ownerWithdraw failed receive", async () => {
+      const { bwc, owner, accounts: [acc1], adversary } = await loadFixture(fixturePreconfigured);
+
+      await bwc.deposit(0,nativeEther,0,owner.address,1,0,{value: 100});
+      await bwc.transferOwnership(adversary.address);
+
+      await expect(adversary.callOwnerWithdraw())
+        .to.be.revertedWithoutReason;
+    });
+
+    it("non-owner calls", async () => {
+      const { bwc, accounts: [acc1] } = await loadFixture(fixturePreconfigured);
+      
+      await expect(bwc.connect(acc1).ownerDeposit({value: 10}))
+        .to.be.revertedWith(/Ownable: caller is not the owner/);
+      
+      await expect(bwc.connect(acc1).ownerWithdraw(0))
+        .to.be.revertedWith(/Ownable: caller is not the owner/);
+      
+      await expect(bwc.connect(acc1).setL2execGasFeeDeposit(0))
+        .to.be.revertedWith(/Ownable: caller is not the owner/);
+      
+      await expect(bwc.connect(acc1).setServiceFee(0))
+        .to.be.revertedWith(/Ownable: caller is not the owner/);
+    });
+
+    it("respects the fee invariants", async () => {
+      const { bwc } = await loadFixture(fixtureBarebone);
+
+      await expect(bwc.setServiceFee(l2GasfeeDeposit-1))
+        .to.be.revertedWith(/Service fee must cover at least the execution gas requirement/);
+
+      await expect(bwc.setL2execGasFeeDeposit(serviceFee+1))
+      .to.be.revertedWith(/Service fee must cover at least the execution gas requirement/);
+
+      expect(await bwc.setServiceFee(l2GasfeeDeposit));
+
+      expect(await bwc.setServiceFee(serviceFee));
+
+      expect(await bwc.setL2execGasFeeDeposit(serviceFee));
+    });
+  });
+
 });

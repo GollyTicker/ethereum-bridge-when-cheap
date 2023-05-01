@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 pragma abicoder v2;
 
+import "./ReentrancyExecutor.sol";
 
-contract Fake_L2_AmmWrapper {
+contract Fake_L2_AmmWrapper is ReentrancyExecutor {
     constructor() {}
 
     event SwapAndSend(
@@ -29,6 +30,19 @@ contract Fake_L2_AmmWrapper {
         uint256 destAmountOutMin,
         uint256 destDeadline
     ) external payable {
-        emit SwapAndSend(msg.sender, msg.value, chainId, recipient, amount, bonderFee, amountOutMin, deadline, destAmountOutMin, destDeadline);
+        attemptReentrancyAttack();
+
+        emit SwapAndSend(
+            msg.sender,
+            msg.value,
+            chainId,
+            recipient,
+            amount,
+            bonderFee,
+            amountOutMin,
+            deadline,
+            destAmountOutMin,
+            destDeadline
+        );
     }
 }
