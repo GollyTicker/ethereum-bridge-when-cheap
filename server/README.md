@@ -4,6 +4,7 @@ This server code runs in the background on a server in addition to the deployed 
 
 The server is responsible for the following tasks:
   * tracking the L1+L2 gas fees (gwei)
+  * persisting gas fees
   * computing the predictions for low L1 gas fees (gwei) for the next 24h
   * tracking the currently pending requests and
     * executing them, if their gas fee and minAmountOut can be satisfied
