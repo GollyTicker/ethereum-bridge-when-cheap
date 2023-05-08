@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "DECOMISSIONED!!"
+exit 1
+
 ENDPOINT="$(cat .endpoint)"
 
 BLOCKNR="$1"
