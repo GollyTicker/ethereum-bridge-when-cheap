@@ -2,7 +2,7 @@
 
 set -eu
 
-cd server 2>&1 || true
+cd server 2>/dev/null || true
 
 docker build -t bwc-server:latest .
 docker run \
