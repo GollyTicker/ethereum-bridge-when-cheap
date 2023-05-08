@@ -61,11 +61,32 @@ export class GasDB {
       );
 
       console.log(
-        `[chainId: ${chainId}] Found ${
+        `[chainId: ${chainId}] STATUS: ${
           result.length
         } entries in table ${this.table(chainId)}.`
       );
     }
+  }
+
+  public async getLatestRecordedBlockNr(chainId: number): Promise<number> {
+    const tableName = this.table(chainId);
+    const result = await promisify(this.db.all).call(
+      this.db,
+      `SELECT MAX(blockNr) as blockNr FROM ${tableName}`
+    );
+    return (<{ blockNr: number }[]>result)[0].blockNr;
+  }
+
+  public async getGasInfo(
+    block: number,
+    chainId: number
+  ): Promise<GasInfo | undefined> {
+    const tableName = this.table(chainId);
+    const result = await promisify(this.db.all).call(
+      this.db,
+      `SELECT * from ${tableName} WHERE blockNr=${block}`
+    );
+    return (<GasInfo[] | undefined>result)?.[0];
   }
 
   public async recordGasInfo(gasInfo: GasInfo) {
