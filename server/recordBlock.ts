@@ -1,10 +1,11 @@
 import { providers } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { GasDB, GasInfo } from "./db";
+import { ThrottledProvider } from "./config";
 
 export async function recordBlock(
   block: providers.Block,
-  provider: providers.JsonRpcProvider,
+  provider: ThrottledProvider,
   db: GasDB
 ) {
   const gasInfo: GasInfo = {

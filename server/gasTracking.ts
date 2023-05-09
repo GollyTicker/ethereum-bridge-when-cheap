@@ -1,11 +1,10 @@
-import { providers } from "ethers";
-import { GAS_TRACKER_QUEUE } from "./config";
+import { GAS_TRACKER_QUEUE, ThrottledProvider } from "./config";
 import { GasDB } from "./db";
 import { recordBlock } from "./recordBlock";
 
 export async function runGasTracker(
   db: GasDB,
-  onFirstBlockReceived: (provider: providers.JsonRpcProvider) => any
+  onFirstBlockReceived: (provider: ThrottledProvider) => any
 ) {
   for (const provider of GAS_TRACKER_QUEUE.keys()) {
     console.log(
@@ -27,7 +26,7 @@ export async function runGasTracker(
         GAS_TRACKER_QUEUE.set(provider, [cachedBlocks, blockNr]);
       }
 
-      const retreivedBlock = await provider.getBlock(blockNr);
+      const retreivedBlock = await provider.getBlockThrottled(blockNr);
       cachedBlocks.set(blockNr, [retreivedBlock, receiveDate]);
 
       // process as many blocks as possible

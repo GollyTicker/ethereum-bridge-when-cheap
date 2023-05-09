@@ -1,11 +1,10 @@
-import { providers } from "ethers";
-import { GAS_START_BLOCK } from "./config";
+import { GAS_START_BLOCK, ThrottledProvider } from "./config";
 import { GasDB } from "./db";
 import { recordBlock } from "./recordBlock";
 
 export async function populateAllPastGas(
   db: GasDB,
-  provider: providers.JsonRpcProvider
+  provider: ThrottledProvider
 ) {
   const { chainId, startBlock, latestBlock } = await setup(provider, db);
 
@@ -13,17 +12,17 @@ export async function populateAllPastGas(
     const missingInDb =
       (await db.getGasInfo(startBlock, chainId)) === undefined;
     if (missingInDb) {
-      const block = await provider.getBlock(blockNr);
+      const block = await provider.getBlockThrottled(blockNr);
       await recordBlock(block, provider, db);
     }
   }
 
   console.log(
-    `[chainId: ${chainId}] =============== Finished populating all past. ===============`
+    `[chainId: ${chainId}] =============== Finished populating all past! ===============`
   );
 }
 
-async function setup(provider: providers.JsonRpcProvider, db: GasDB) {
+async function setup(provider: ThrottledProvider, db: GasDB) {
   const chainId = provider.network.chainId;
   const startBlock = GAS_START_BLOCK.get(chainId)!;
   const latestBlock = await db.getLatestRecordedBlockNr(chainId);
