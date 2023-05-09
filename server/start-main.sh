@@ -9,4 +9,5 @@ docker run \
   -d --rm --name bwc-server \
   -v "./data:/wd/data" \
   --cpus="0.25" \
+  --memory="100m" \
   "bwc-server:latest"
