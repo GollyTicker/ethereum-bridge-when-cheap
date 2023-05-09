@@ -13,8 +13,9 @@ fi
 docker build -t bwc-server:latest .
 docker rm -f bwc-server || true
 docker run \
-  --name bwc-server \
+  -d --name bwc-server \
   -v "./data:/wd/data" \
   --cpus="1" \
-  --memory="400m" \
+  --memory="500m" \
+  --memory-swap="1.2g" \
   "bwc-server:latest"
