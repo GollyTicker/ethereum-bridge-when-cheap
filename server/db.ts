@@ -53,16 +53,16 @@ export class GasDB {
 
   public async printStatus() {
     for (const chainId of this.chainIds) {
-      const result: GasInfoEntry[] = <any>(
+      const result: { Count: number }[] = <any>(
         await promisify(this.db.all).call(
           this.db,
-          `SELECT * FROM ${this.table(chainId)}`
+          `SELECT COUNT(*) as Count FROM ${this.table(chainId)}`
         )
       );
 
       console.log(
         `[chainId: ${chainId}] STATUS: ${
-          result.length
+          result[0].Count
         } entries in table ${this.table(chainId)}.`
       );
     }
