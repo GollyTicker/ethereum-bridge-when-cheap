@@ -17,7 +17,7 @@ export async function recordBlock(
 
   await db.recordGasInfo(gasInfo);
 
-  if (block.number % 25 === 0) {
+  if (block.number % 100 === 0) {
     await db.printStatus();
   }
 }
