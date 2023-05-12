@@ -18,4 +18,5 @@ docker run \
   --cpus="1" \
   --memory="500m" \
   --memory-swap="1.2g" \
+  --restart="unless-stopped" \
   "bwc-server:latest"
