@@ -7,7 +7,7 @@ export async function recordBlock(
   block: providers.Block,
   provider: ThrottledProvider,
   db: GasDB
-) {
+): Promise<GasInfo> {
   const gasInfo: GasInfo = {
     blockNr: block.number,
     unixSeconds: block.timestamp,
@@ -20,4 +20,5 @@ export async function recordBlock(
   if (block.number % 100 === 0) {
     await db.printStatus();
   }
+  return gasInfo;
 }

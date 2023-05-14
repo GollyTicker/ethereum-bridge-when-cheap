@@ -1,6 +1,6 @@
-import throttle from "@jcoreio/async-throttle";
 import dotenv from "dotenv";
 import { ethers, providers } from "ethers";
+import queueThrottled from "throttled-queue";
 
 // environment variables
 dotenv.config();
@@ -11,7 +11,9 @@ const {
   L2,
   L1_START_BLOCK,
   L2_START_BLOCK,
-  GET_BLOCK_THROTTLED_MS
+  L1_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS,
+  L2_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS,
+  GET_BLOCK_MAX_REQUESTS_PER_SECOND
 } = process.env;
 
 // provider throttling
@@ -22,11 +24,13 @@ export type ThrottledProvider = providers.JsonRpcProvider & {
 function enrichProviderWithThrottling(
   p: providers.JsonRpcProvider
 ): ThrottledProvider {
-  const pNew = <ThrottledProvider>p;
-  pNew.getBlockThrottled = throttle(
-    pNew.getBlock.bind(pNew),
-    parseInt(GET_BLOCK_THROTTLED_MS!)
+  const throttle = queueThrottled(
+    parseInt(GET_BLOCK_MAX_REQUESTS_PER_SECOND!),
+    1000
   );
+  const pNew = <ThrottledProvider>p;
+  pNew.getBlockThrottled = (b: Parameters<providers.Provider["getBlock"]>[0]) =>
+    throttle(() => pNew.getBlock(b));
   return pNew;
 }
 
@@ -45,6 +49,17 @@ export const GAS_TRACKER_QUEUE: Map<
 export const GAS_START_BLOCK: Map<number, number> = new Map([
   [providerL1.network.chainId, parseInt(L1_START_BLOCK!)],
   [providerL2.network.chainId, parseInt(L2_START_BLOCK!)]
+]);
+
+export const PREDICTION_RECOMPUTE_EVERY_N_BLOCKS = new Map([
+  [
+    providerL1.network.chainId,
+    parseInt(L1_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS!)
+  ],
+  [
+    providerL2.network.chainId,
+    parseInt(L2_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS!)
+  ]
 ]);
 
 export const CHAIN_IDS = Array.from(GAS_TRACKER_QUEUE.keys()).map(

@@ -4,7 +4,8 @@ import { recordBlock } from "./recordBlock";
 
 export async function populateAllPastGas(
   db: GasDB,
-  provider: ThrottledProvider
+  provider: ThrottledProvider,
+  afterGasPopulated: (chainId: number) => void
 ) {
   const { chainId, startBlock, latestBlock } = await setup(provider, db);
 
@@ -20,6 +21,8 @@ export async function populateAllPastGas(
   console.log(
     `[chainId: ${chainId}] =============== Finished populating all past! ===============`
   );
+
+  afterGasPopulated(chainId);
 }
 
 async function setup(provider: ThrottledProvider, db: GasDB) {
