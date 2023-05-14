@@ -1,5 +1,5 @@
-import { CHAIN_IDS, PREDICTION_RECOMPUTE_EVERY_N_BLOCKS } from "./config";
-import { GasInfo } from "./db";
+import { CHAIN_IDS, chainConfig } from "./config";
+import { GasDB, GasInfo } from "./db";
 
 export class GasPredictor {
   private hasSyncedToPresent: Set<number> = new Set();
@@ -7,7 +7,7 @@ export class GasPredictor {
     CHAIN_IDS.map((id) => [id, 1])
   );
 
-  constructor() {}
+  constructor(private db: GasDB) {}
 
   isSynced(chainId: number): boolean {
     return this.hasSyncedToPresent.has(chainId);
@@ -19,17 +19,27 @@ export class GasPredictor {
 
   public async updatePredictionAfterNewBlock(gasInfo: GasInfo): Promise<void> {
     const { chainId, blockNr } = gasInfo;
+    const config = chainConfig.get(chainId)!;
     const blockCounterOld = this.blocksUntilPredictionUpdate.get(chainId)!;
     const blockCounterNew = blockCounterOld - 1;
 
     if (blockCounterNew <= 0) {
+      const startBlockNr = blockNr - config.prediction.lookbackBlocks;
+
+      const predictedGas: number = await this.db.computeGasPrediction(
+        gasInfo.chainId,
+        startBlockNr,
+        blockNr,
+        config.prediction.percentile
+      );
+
       console.log(
-        `[chainId ${chainId}] Predicting gas looking back from block ${blockNr}`
+        `[chainId ${chainId}] Predicted gas: ${predictedGas} from start = ${startBlockNr} and end = ${blockNr}`
       );
 
       this.blocksUntilPredictionUpdate.set(
         chainId,
-        PREDICTION_RECOMPUTE_EVERY_N_BLOCKS.get(chainId)!
+        config.prediction.recomputeEveryNBlocks
       );
     } else {
       this.blocksUntilPredictionUpdate.set(chainId, blockCounterNew);

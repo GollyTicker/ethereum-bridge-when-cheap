@@ -1,4 +1,4 @@
-import { GAS_START_BLOCK, ThrottledProvider } from "./config";
+import { ThrottledProvider, chainConfig } from "./config";
 import { GasDB } from "./db";
 import { recordBlock } from "./recordBlock";
 
@@ -27,7 +27,7 @@ export async function populateAllPastGas(
 
 async function setup(provider: ThrottledProvider, db: GasDB) {
   const chainId = provider.network.chainId;
-  const startBlock = GAS_START_BLOCK.get(chainId)!;
+  const startBlock = chainConfig.get(chainId)!.startBlock;
   const latestBlock = await db.getLatestRecordedBlockNr(chainId);
 
   console.log(

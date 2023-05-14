@@ -13,7 +13,11 @@ const {
   L2_START_BLOCK,
   L1_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS,
   L2_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS,
-  GET_BLOCK_MAX_REQUESTS_PER_SECOND
+  GET_BLOCK_MAX_REQUESTS_PER_SECOND,
+  L1_PREDICTION_NUMBER_OF_LOOKBACK_BLOCKS,
+  L2_PREDICTION_NUMBER_OF_LOOKBACK_BLOCKS,
+  L1_PREDICTION_PERCENTILE,
+  L2_PREDICTION_PERCENTILE
 } = process.env;
 
 // provider throttling
@@ -35,8 +39,8 @@ function enrichProviderWithThrottling(
 }
 
 // providers and queue
-export const providerL1 = new ethers.providers.JsonRpcProvider(L1_RPC_URL, L1);
-export const providerL2 = new ethers.providers.JsonRpcProvider(L2_RPC_URL, L2);
+const providerL1 = new ethers.providers.JsonRpcProvider(L1_RPC_URL, L1);
+const providerL2 = new ethers.providers.JsonRpcProvider(L2_RPC_URL, L2);
 
 export const GAS_TRACKER_QUEUE: Map<
   ThrottledProvider,
@@ -46,19 +50,47 @@ export const GAS_TRACKER_QUEUE: Map<
   [enrichProviderWithThrottling(providerL2), [new Map(), undefined]]
 ]);
 
-export const GAS_START_BLOCK: Map<number, number> = new Map([
-  [providerL1.network.chainId, parseInt(L1_START_BLOCK!)],
-  [providerL2.network.chainId, parseInt(L2_START_BLOCK!)]
-]);
+export function getProvider(chainId: number): ThrottledProvider {
+  return Array.from(GAS_TRACKER_QUEUE.keys()).filter(
+    (p) => p.network.chainId === chainId
+  )[0];
+}
 
-export const PREDICTION_RECOMPUTE_EVERY_N_BLOCKS = new Map([
+export interface ChainConfig {
+  startBlock: number;
+  prediction: {
+    recomputeEveryNBlocks: number;
+    lookbackBlocks: number;
+    percentile: number;
+  };
+}
+
+export const chainConfig: Map<number, ChainConfig> = new Map([
   [
     providerL1.network.chainId,
-    parseInt(L1_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS!)
+    {
+      startBlock: parseInt(L1_START_BLOCK!),
+      prediction: {
+        recomputeEveryNBlocks: parseInt(
+          L1_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS!
+        ),
+        lookbackBlocks: parseInt(L1_PREDICTION_NUMBER_OF_LOOKBACK_BLOCKS!),
+        percentile: parseFloat(L1_PREDICTION_PERCENTILE!)
+      }
+    }
   ],
   [
     providerL2.network.chainId,
-    parseInt(L2_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS!)
+    {
+      startBlock: parseInt(L2_START_BLOCK!),
+      prediction: {
+        recomputeEveryNBlocks: parseInt(
+          L2_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS!
+        ),
+        lookbackBlocks: parseInt(L2_PREDICTION_NUMBER_OF_LOOKBACK_BLOCKS!),
+        percentile: parseFloat(L2_PREDICTION_PERCENTILE!)
+      }
+    }
   ]
 ]);
 

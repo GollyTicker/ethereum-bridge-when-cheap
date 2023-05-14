@@ -1,7 +1,7 @@
-import { promisify } from "util";
-import { Database, RunResult } from "sqlite3";
 import { BigNumber } from "ethers";
 import { formatUnits } from "ethers/lib/utils";
+import { Database, RunResult } from "sqlite3";
+import { promisify } from "util";
 
 const dbFile = "data/gas.db";
 
@@ -13,12 +13,6 @@ export interface GasInfo {
   blockNr: number;
   unixSeconds: number;
   gasFee: BigNumber;
-}
-
-interface GasInfoEntry {
-  blockNr: number;
-  unixSeconds: number;
-  gasFee: string;
 }
 
 export class GasDB {
@@ -105,5 +99,39 @@ export class GasDB {
       gasInfo.unixSeconds,
       formatUnits(gasInfo.gasFee, "wei")
     );
+  }
+
+  public async computeGasPrediction(
+    chainId: number,
+    startBlockNr: number,
+    endBlockNr: number,
+    percentile: number
+  ): Promise<number> {
+    const result = await promisify(
+      (
+        sql: string,
+        p1: number,
+        p2: number,
+        p3: number,
+        callback: (this: RunResult, err: Error | null) => void
+      ) => this.db.all(sql, p1, p2, p3, callback)
+    )(
+      `WITH gasFeesWindow as (
+        SELECT CAST(gasFee AS INTEGER) AS gasFeeInt
+        FROM ${this.table(chainId)} WHERE blockNr BETWEEN ? AND ?
+        ORDER BY gasFeeInt ASC
+      )
+      SELECT * FROM gasFeesWindow
+      LIMIT 1 OFFSET (
+        SELECT FLOOR(COUNT(*) * ?) FROM gasFeesWindow
+      )`,
+      startBlockNr,
+      endBlockNr,
+      percentile
+    );
+
+    const typedResult = <{ gasFeeInt: number }[]>(<unknown>result);
+
+    return typedResult[0].gasFeeInt;
   }
 }
