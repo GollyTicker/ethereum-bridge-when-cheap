@@ -40,7 +40,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
 
     // Native Ether: token = address(0)
     // arbitrum: goerli hop L2 AMM Wrapper: 0xa832293f2DCe2f092182F17dd873ae06AD5fDbaF
-    // arbitrum: goerli fake l2 amm warpper: 0x1Eb7c70da731F41122f3E4fDcf7E6f723018c369
+    // arbitrum: goerli fake l2 amm warpper: 0x98de918e05d45d53fc6c85b15b4db853ddc6e0f9
 
     // solhint-disable-next-line
     constructor(
