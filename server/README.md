@@ -6,7 +6,7 @@ The server is responsible for the following tasks:
   * tracking the L1+L2 gas fees (gwei) ✅
   * persisting gas fees ✅
   * computing the predictions for low L1 gas fees (gwei) for the next 24h ✅
-  * reduce the number of requests to stay within RPC provider free tier.
+  * reduce the number of requests to stay within RPC provider free tier. ✅
     * I don't need the gas amount for every block on L2, as they have much faster blocks in general.
   * tracking the currently pending requests and
     * executing them, if their gas fee and minAmountOut can be satisfied
