@@ -1,10 +1,13 @@
 #!/bin/bash
 
-set -eu
+set -e
 
 cd server 2>/dev/null || true
 
-sudo swapon /swapfile || true
+# Set this variable on developer machines to avoid this statement.
+if [[ "$DEACTIVATE_SWAP" == "" ]]; then
+  sudo swapon /swapfile || true
+fi
 
 if [[ "$(swapon -s)" == "" ]]; then
   echo "OS must use Swap of at least 1g. Otherwise OS will get OOM issues!"

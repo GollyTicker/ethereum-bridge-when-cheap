@@ -9,18 +9,26 @@ export async function populateAllPastGas(
 ) {
   const { chainId, startBlock, latestBlock } = await setup(provider, db);
 
-  for (let blockNr = latestBlock; blockNr >= startBlock; blockNr--) {
-    const missingInDb =
-      (await db.getGasInfo(startBlock, chainId)) === undefined;
-    if (missingInDb) {
-      const block = await provider.getBlockThrottled(blockNr);
-      await recordBlock(block, provider, db);
-    }
-  }
+  const config = chainConfig.get(chainId)!;
 
-  console.log(
-    `[chainId: ${chainId}] =============== Finished populating all past! ===============`
-  );
+  if (config.recordEveryNthBlock === 1) {
+    for (let blockNr = latestBlock; blockNr >= startBlock; blockNr--) {
+      const missingInDb =
+        (await db.getGasInfo(startBlock, chainId)) === undefined;
+      if (missingInDb) {
+        const block = await provider.getBlockThrottled(blockNr);
+        await recordBlock(block, provider, db);
+      }
+    }
+
+    console.log(
+      `[chainId: ${chainId}] =============== Finished populating all past! ===============`
+    );
+  } else {
+    console.log(
+      `[chainId: ${chainId}] =============== Past gas population skipped, since chain has skipped blocks for recording ===============`
+    );
+  }
 
   afterGasPopulated(chainId);
 }

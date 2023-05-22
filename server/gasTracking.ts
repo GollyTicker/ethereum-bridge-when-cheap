@@ -1,4 +1,4 @@
-import { GAS_TRACKER_QUEUE, ThrottledProvider } from "./config";
+import { GAS_TRACKER_QUEUE, ThrottledProvider, chainConfig } from "./config";
 import { GasDB, GasInfo } from "./db";
 import { recordBlock } from "./recordBlock";
 
@@ -14,7 +14,9 @@ export async function runGasTracker(
     console.log(
       `[chainId: ${provider.network.chainId}] Listening to blocks on ${provider.network.name} ...`
     );
+    const config = chainConfig.get(provider.network.chainId)!;
     let firstBlock: number | undefined;
+    let notifiedBlocks = -1;
 
     provider.on("block", async (blockNr) => {
       if (firstBlock === undefined) {
@@ -22,12 +24,17 @@ export async function runGasTracker(
         onFirstBlockReceived(provider);
       }
 
-      const retreivedBlock = await provider.getBlockThrottled(blockNr);
+      notifiedBlocks = (notifiedBlocks + 1) % config.recordEveryNthBlock;
 
-      /* no-await */
-      recordBlock(retreivedBlock, provider, db).then((g: GasInfo) =>
-        afterNewUnorderedBlockRecorded(g, firstBlock!)
-      );
+      if (notifiedBlocks === 0) {
+        // only record every nth block
+        const retreivedBlock = await provider.getBlockThrottled(blockNr);
+
+        /* no-await */
+        recordBlock(retreivedBlock, provider, db).then((g: GasInfo) =>
+          afterNewUnorderedBlockRecorded(g, firstBlock!)
+        );
+      }
     });
   }
 }

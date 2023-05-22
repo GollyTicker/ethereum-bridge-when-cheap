@@ -17,7 +17,9 @@ const {
   L1_PREDICTION_NUMBER_OF_LOOKBACK_BLOCKS,
   L2_PREDICTION_NUMBER_OF_LOOKBACK_BLOCKS,
   L1_PREDICTION_PERCENTILE,
-  L2_PREDICTION_PERCENTILE
+  L2_PREDICTION_PERCENTILE,
+  L1_RECORD_EVERY_NTH_BLOCK,
+  L2_RECORD_EVERY_NTH_BLOCK
 } = process.env;
 
 // provider throttling
@@ -58,6 +60,7 @@ export function getProvider(chainId: number): ThrottledProvider {
 
 export interface ChainConfig {
   startBlock: number;
+  recordEveryNthBlock: number;
   prediction: {
     recomputeEveryNBlocks: number;
     lookbackBlocks: number;
@@ -70,6 +73,7 @@ export const chainConfig: Map<number, ChainConfig> = new Map([
     providerL1.network.chainId,
     {
       startBlock: parseInt(L1_START_BLOCK!),
+      recordEveryNthBlock: parseInt(L1_RECORD_EVERY_NTH_BLOCK!),
       prediction: {
         recomputeEveryNBlocks: parseInt(
           L1_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS!
@@ -83,6 +87,7 @@ export const chainConfig: Map<number, ChainConfig> = new Map([
     providerL2.network.chainId,
     {
       startBlock: parseInt(L2_START_BLOCK!),
+      recordEveryNthBlock: parseInt(L2_RECORD_EVERY_NTH_BLOCK!),
       prediction: {
         recomputeEveryNBlocks: parseInt(
           L2_PREDICTION_RECOMPUTE_EVERY_N_BLOCKS!
