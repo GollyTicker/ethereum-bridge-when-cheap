@@ -8,10 +8,10 @@ contract Fake_L2_AmmWrapper is ReentrancyExecutor {
     constructor() {}
 
     event SwapAndSend(
-        address sender,
+        address indexed sender,
         uint256 paidAmount,
-        uint256 chainId,
-        address recipient,
+        uint256 indexed chainId,
+        address indexed recipient,
         uint256 amount,
         uint256 bonderFee,
         uint256 amountOutMin,

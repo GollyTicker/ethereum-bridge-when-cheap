@@ -19,9 +19,18 @@ struct BridgeRequest {
 interface IBridgeWhenCheap {
     // ===================== ESSENTIAL FUNCTIONS
 
-    event BridgeRequested(uint256 requestId, BridgeRequest request);
-    event BridgeExecutionSubmitted(uint256 requestId, BridgeRequest request);
-    event BridgeRequestWithdrawn(uint256 requestId, BridgeRequest request);
+    event BridgeRequested(
+        uint256 indexed requestId,
+        BridgeRequest indexed request
+    );
+    event BridgeExecutionSubmitted(
+        uint256 indexed requestId,
+        BridgeRequest indexed request
+    );
+    event BridgeRequestWithdrawn(
+        uint256 indexed requestId,
+        BridgeRequest indexed request
+    );
 
     function deposit(
         uint256 requestId,
