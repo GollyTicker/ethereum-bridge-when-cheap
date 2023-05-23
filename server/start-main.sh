@@ -16,7 +16,12 @@ if [[ "$(swapon -s)" == "" ]]; then
 fi
 
 docker build -t bwc-server:latest .
+
 docker rm -f bwc-server || true
+
+cp ../solidity/artifacts/contracts/IBridgeWhenCheap.sol/IBridgeWhenCheap.json data/IBridgeWhenCheap.json ||
+  (echo "Please build the solidity project first" && exit 1)
+
 docker run \
   -d --name bwc-server \
   -v "./data:/wd/data" \

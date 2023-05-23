@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
-import { ethers, providers } from "ethers";
+import fs from "fs";
+import { Contract, ethers, providers } from "ethers";
 import queueThrottled from "throttled-queue";
 
 // environment variables
@@ -19,7 +20,8 @@ const {
   L1_PREDICTION_PERCENTILE,
   L2_PREDICTION_PERCENTILE,
   L1_RECORD_EVERY_NTH_BLOCK,
-  L2_RECORD_EVERY_NTH_BLOCK
+  L2_RECORD_EVERY_NTH_BLOCK,
+  L2_BWC_CONTRACT_ADDR
 } = process.env;
 
 // provider throttling
@@ -60,6 +62,7 @@ export function getProvider(chainId: number): ThrottledProvider {
 
 export interface ChainConfig {
   startBlock: number;
+  bridgeWhenCheapContractAddress?: string;
   recordEveryNthBlock: number;
   prediction: {
     recomputeEveryNBlocks: number;
@@ -73,6 +76,7 @@ export const chainConfig: Map<number, ChainConfig> = new Map([
     providerL1.network.chainId,
     {
       startBlock: parseInt(L1_START_BLOCK!),
+      bridgeWhenCheapContractAddress: undefined,
       recordEveryNthBlock: parseInt(L1_RECORD_EVERY_NTH_BLOCK!),
       prediction: {
         recomputeEveryNBlocks: parseInt(
@@ -87,6 +91,7 @@ export const chainConfig: Map<number, ChainConfig> = new Map([
     providerL2.network.chainId,
     {
       startBlock: parseInt(L2_START_BLOCK!),
+      bridgeWhenCheapContractAddress: L2_BWC_CONTRACT_ADDR!,
       recordEveryNthBlock: parseInt(L2_RECORD_EVERY_NTH_BLOCK!),
       prediction: {
         recomputeEveryNBlocks: parseInt(
@@ -102,3 +107,14 @@ export const chainConfig: Map<number, ChainConfig> = new Map([
 export const CHAIN_IDS = Array.from(GAS_TRACKER_QUEUE.keys()).map(
   (p) => p.network.chainId
 );
+
+const CONTRACT_ABI_FILE_PATH = "data/IBridgeWhenCheap.json";
+
+export async function getBwcContract(
+  address: string,
+  provider: ThrottledProvider
+) {
+  const json = JSON.parse(fs.readFileSync(CONTRACT_ABI_FILE_PATH).toString());
+  return new Contract(address, json.abi, provider);
+  // todo. How might we get the proper typing of the contract like in the solidity typescript tests here?
+}

@@ -1,6 +1,7 @@
 import throttledQueue from "throttled-queue";
+import { runBwcRequestService } from "./bwcRequestService";
 import { CHAIN_IDS } from "./config";
-import { GasDB, GasInfo } from "./db";
+import { GasDB } from "./db";
 import { runGasTracker } from "./gasTracking";
 import { populateAllPastGas } from "./populatePastGas";
 import { GasPredictor } from "./predict";
@@ -31,6 +32,9 @@ async function main() {
       )
     )
   );
+
+  /* no-await */
+  runBwcRequestService(db);
 }
 
 main();
