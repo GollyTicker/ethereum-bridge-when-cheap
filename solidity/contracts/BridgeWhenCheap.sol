@@ -10,7 +10,7 @@ import "./IBridgeWhenCheap.sol";
 
 // todo. create a contact email
 /// @custom:security-contact bridge-when-cheap@gmail.com
-contract BridgeWhenCheap is Ownable, ReentrancyGuard {
+contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
     // The amount of total gas required to execute a single L2 -> L1 Hop Bridge via the executeRequest function.
     // This amount is deducted from requestors to pay for the gas fees of the delayed execution.
     uint256 public l2execGasFeeDeposit;
@@ -70,10 +70,6 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
     */
 
     // ===================== ESSENTIAL FUNCTIONS
-
-    event BridgeRequested(uint256 requestId, BridgeRequest request);
-    event BridgeExecutionSubmitted(uint256 requestId, BridgeRequest request);
-    event BridgeRequestWithdrawn(uint256 requestId, BridgeRequest request);
 
     // Deposit funds which will be bridged to destination via Hop Bridge
     // when the L1 gas fees are at wantedL1GasPrice or lower.
@@ -150,7 +146,11 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             l2execGasFeeDeposit: l2execGasFeeDeposit
         });
 
-        emit BridgeRequested(requestId, pendingRequests[msg.sender][requestId]);
+        emit BridgeRequested(
+            msg.sender,
+            requestId,
+            pendingRequests[msg.sender][requestId]
+        );
 
         // INTERACTIONS
         // Receive deposit. Native ether happens automatically. Token transfer needs to be done explicitly and requires approval.
@@ -195,7 +195,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
                 obsoleteRequest.token.transfer(msg.sender, withdrawTokenAmount)
             );
         }
-        emit BridgeRequestWithdrawn(requestId, obsoleteRequest);
+        emit BridgeRequestWithdrawn(msg.sender, requestId, obsoleteRequest);
     }
 
     // Execute the request for the given requestor address and request id.
@@ -251,7 +251,7 @@ contract BridgeWhenCheap is Ownable, ReentrancyGuard {
             toBeBridgedRequest.l2execGasFeeDeposit
         );
 
-        emit BridgeExecutionSubmitted(requestId, toBeBridgedRequest);
+        emit BridgeExecutionSubmitted(requestor, requestId, toBeBridgedRequest);
     }
 
     // ====================== OWNER MANAGEMENT FUNCTIONS

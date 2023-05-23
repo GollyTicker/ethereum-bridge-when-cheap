@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // A request of what is to be bridged from L2 to L1
 // together with the wanted L1 gas price at which this should be executed.
 struct BridgeRequest {
-    address source;
+    address source; // indexed
     address destination;
     bool isTokenTransfer;
     IERC20 token;
@@ -19,17 +19,23 @@ struct BridgeRequest {
 interface IBridgeWhenCheap {
     // ===================== ESSENTIAL FUNCTIONS
 
+    // We duplicate some indexed information from the `request` within the Event
+    // to facilitate efficient indexing. Indexing of the original struct would make it un-retrieveable however.
+    // See: https://docs.soliditylang.org/en/v0.8.4/abi-spec.html#events
     event BridgeRequested(
+        address indexed source,
         uint256 indexed requestId,
-        BridgeRequest indexed request
+        BridgeRequest request
     );
     event BridgeExecutionSubmitted(
+        address indexed source,
         uint256 indexed requestId,
-        BridgeRequest indexed request
+        BridgeRequest request
     );
     event BridgeRequestWithdrawn(
+        address indexed source,
         uint256 indexed requestId,
-        BridgeRequest indexed request
+        BridgeRequest request
     );
 
     function deposit(
