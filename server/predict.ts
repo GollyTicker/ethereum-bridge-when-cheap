@@ -1,5 +1,5 @@
 import { CHAIN_IDS, chainConfig } from "./config";
-import { GasDB, GasInfo } from "./db";
+import { BwcDB, GasInfo } from "./db";
 
 export class GasPredictor {
   private hasSyncedToPresent: Set<number> = new Set();
@@ -7,7 +7,7 @@ export class GasPredictor {
     CHAIN_IDS.map((id) => [id, 1])
   );
 
-  constructor(private db: GasDB) {}
+  constructor(private db: BwcDB) {}
 
   isSynced(chainId: number): boolean {
     return this.hasSyncedToPresent.has(chainId);

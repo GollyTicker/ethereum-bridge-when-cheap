@@ -1,9 +1,9 @@
 import { GAS_TRACKER_QUEUE, ThrottledProvider, chainConfig } from "./config";
-import { GasDB, GasInfo } from "./db";
+import { BwcDB, GasInfo } from "./db";
 import { recordBlock } from "./recordBlock";
 
 export async function runGasTracker(
-  db: GasDB,
+  db: BwcDB,
   onFirstBlockReceived: (provider: ThrottledProvider) => Promise<void>,
   afterNewUnorderedBlockRecorded: (
     gasInfo: GasInfo,

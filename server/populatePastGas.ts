@@ -1,9 +1,9 @@
 import { ThrottledProvider, chainConfig } from "./config";
-import { GasDB } from "./db";
+import { BwcDB } from "./db";
 import { recordBlock } from "./recordBlock";
 
 export async function populateAllPastGas(
-  db: GasDB,
+  db: BwcDB,
   provider: ThrottledProvider,
   afterGasPopulated: (chainId: number) => void
 ) {
@@ -33,7 +33,7 @@ export async function populateAllPastGas(
   afterGasPopulated(chainId);
 }
 
-async function setup(provider: ThrottledProvider, db: GasDB) {
+async function setup(provider: ThrottledProvider, db: BwcDB) {
   const chainId = provider.network.chainId;
   const startBlock = chainConfig.get(chainId)!.startBlock;
   const latestBlock = await db.getLatestRecordedBlockNr(chainId);

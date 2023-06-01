@@ -1,7 +1,7 @@
 import throttledQueue from "throttled-queue";
 import { runBwcRequestService } from "./bwcRequestService";
 import { CHAIN_IDS } from "./config";
-import { GasDB } from "./db";
+import { BwcDB } from "./db";
 import { runGasTracker } from "./gasTracking";
 import { populateAllPastGas } from "./populatePastGas";
 import { GasPredictor } from "./predict";
@@ -12,7 +12,7 @@ const predictionUpdateThrottling = throttledQueue(100, 1000); // 100x per second
 async function main() {
   console.log("Starting server...");
 
-  const db = new GasDB(CHAIN_IDS);
+  const db = new BwcDB(CHAIN_IDS);
   await db.init();
 
   const gasPredictor = new GasPredictor(db);

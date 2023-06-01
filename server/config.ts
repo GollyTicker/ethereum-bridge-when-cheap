@@ -108,7 +108,7 @@ export const CHAIN_IDS = Array.from(GAS_TRACKER_QUEUE.keys()).map(
   (p) => p.network.chainId
 );
 
-const CONTRACT_ABI_FILE_PATH = "data/IBridgeWhenCheap.json";
+const CONTRACT_ABI_FILE_PATH = "pre-built/IBridgeWhenCheap.json";
 
 export async function getBwcContract(
   address: string,
