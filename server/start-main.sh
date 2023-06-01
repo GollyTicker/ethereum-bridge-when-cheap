@@ -15,11 +15,11 @@ if [[ "$(swapon -s)" == "" ]]; then
   exit 1
 fi
 
+./0-prepare.sh
+
 docker build -t bwc-server:latest .
 
 docker rm -f bwc-server || true
-
-./0-prepare.sh
 
 docker run \
   -d --name bwc-server \
