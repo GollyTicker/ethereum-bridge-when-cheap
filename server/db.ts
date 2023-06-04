@@ -6,8 +6,8 @@ import { promisify } from "util";
 const dbFile = "data/gas.db";
 
 // a uint256 can have atmost 78 digits in decimal
-const UINT256_DECIMAL_PLACES = 78;
-const ADDRESS_HEX_LENGTH = 42;
+const SQL_UINT256_TYPE = "VARCHAR(78)";
+const SQL_ADDRESS_TYPE = "VARCHAR(42)";
 
 export interface GasInfo {
   chainId: number;
@@ -33,6 +33,10 @@ export class BwcDB {
     return "bwcUsers" + chainId;
   }
 
+  private activeRequestsTable(chainId: number): string {
+    return "bwcActiveRequests" + chainId;
+  }
+
   public async init() {
     console.log("Connecting to database...");
 
@@ -42,15 +46,32 @@ export class BwcDB {
         `CREATE TABLE IF NOT EXISTS ${this.gasTable(chainId)} (
           blockNr INT PRIMARY KEY,
           unixSeconds INT,
-          gasFee VARCHAR(${UINT256_DECIMAL_PLACES})
+          gasFee ${SQL_UINT256_TYPE}
         )`
       );
 
       await promisify(this.db.run).call(
         this.db,
         `CREATE TABLE IF NOT EXISTS ${this.bwcUsersTable(chainId)} (
-          user VARCHAR(${ADDRESS_HEX_LENGTH}) PRIMARY KEY
+          user ${SQL_ADDRESS_TYPE} PRIMARY KEY
         )`
+      );
+
+      await promisify(this.db.run).call(
+        this.db,
+        `CREATE TABLE IF NOT EXISTS ${this.activeRequestsTable(chainId)} (
+          requestor ${SQL_ADDRESS_TYPE},
+          requestId INT,
+          destination ${SQL_ADDRESS_TYPE},
+          isTokenTransfer INT,
+          token ${SQL_ADDRESS_TYPE},
+          amount ${SQL_UINT256_TYPE},
+          amountOutMin ${SQL_UINT256_TYPE},
+          wantedL1GasPrice ${SQL_UINT256_TYPE},
+          l2execGasFeeDeposit ${SQL_UINT256_TYPE},
+          PRIMARY KEY (requestor, requestId)
+        )`
+        // The requestor x requestId are only sufficient to uniquely determine the request during the current time.
       );
     }
 
@@ -59,17 +80,35 @@ export class BwcDB {
 
   public async printStatus() {
     for (const chainId of this.chainIds) {
-      const result: { Count: number }[] = <any>(
+      const gasCount: { Count: number }[] = <any>(
         await promisify(this.db.all).call(
           this.db,
           `SELECT COUNT(*) as Count FROM ${this.gasTable(chainId)}`
         )
       );
 
+      const usersCount: { Count: number }[] = <any>(
+        await promisify(this.db.all).call(
+          this.db,
+          `SELECT COUNT(*) as Count FROM ${this.bwcUsersTable(chainId)}`
+        )
+      );
+
+      const activeRequestsCount: { Count: number }[] = <any>(
+        await promisify(this.db.all).call(
+          this.db,
+          `SELECT COUNT(*) as Count FROM ${this.activeRequestsTable(chainId)}`
+        )
+      );
+
       console.log(
         `[chainId: ${chainId}] STATUS: ${
-          result[0].Count
-        } entries in table ${this.gasTable(chainId)}.`
+          gasCount[0].Count
+        } entries in ${this.gasTable(chainId)}. ${
+          usersCount[0].Count
+        } users in ${this.bwcUsersTable(chainId)}. ${
+          activeRequestsCount[0].Count
+        } active requests in ${this.activeRequestsTable(chainId)}`
       );
     }
   }

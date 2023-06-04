@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import { Contract, ethers, providers } from "ethers";
 import queueThrottled from "throttled-queue";
+import { BridgeWhenCheap } from "./pre-built/typechain-types";
 
 // environment variables
 dotenv.config();
@@ -113,8 +114,7 @@ const CONTRACT_ABI_FILE_PATH = "pre-built/IBridgeWhenCheap.json";
 export async function getBwcContract(
   address: string,
   provider: ThrottledProvider
-) {
+): Promise<BridgeWhenCheap> {
   const json = JSON.parse(fs.readFileSync(CONTRACT_ABI_FILE_PATH).toString());
-  return new Contract(address, json.abi, provider);
-  // todo. How might we get the proper typing of the contract like in the solidity typescript tests here?
+  return <BridgeWhenCheap> new Contract(address, json.abi, provider);
 }
