@@ -57,6 +57,7 @@ async function processAllPastAndAllNewToBwcRequestEvents(
   bwcContractAddr: string,
   db: BwcDB
 ) {
+  const chainId = provider.network.chainId;
   const bwc = await getBwcContract(bwcContractAddr, provider);
 
   const preFilters = bwcEventTypes.map((s) => bwc.filters[s]);
@@ -68,24 +69,30 @@ async function processAllPastAndAllNewToBwcRequestEvents(
   );
   */
 
-  async function forEachEvent(event: BwcEvent) {
-    const bwcEvent = event.args;
-    console.log("event", event.event, bwcEvent.requestId, bwcEvent.request);
+  async function forEachEventInOrder(orgEvent: BwcEvent) {
+    const bwcEvent = orgEvent.args;
+    console.log("event", orgEvent.event, bwcEvent.requestId, bwcEvent.request);
 
     const eventType: (typeof bwcEventTypes)[number] | undefined = <any>(
-      event.event
+      orgEvent.event
     );
 
     switch (eventType) {
       case "BridgeRequested":
-        const narrowEvent: BridgeRequestedEventObject = bwcEvent;
-        await ensureBwcUserIsKnownInDatabase(
-          narrowEvent,
-          db,
-          provider.network.chainId
+        const event: BridgeRequestedEventObject = bwcEvent;
+        await ensureBwcUserIsKnownInDatabase(event, db, chainId);
+        const alreadyDefined = await db.getActiveRequest(
+          event.source,
+          event.requestId,
+          chainId
         );
+        if (alreadyDefined) {
+          throw Error("already defined " + alreadyDefined.toString());
+        }
+        await db.addActiveRequest(event.request, event.requestId, chainId);
         break;
       case "BridgeExecutionSubmitted":
+        // todo. maybe have a status rather than only the pending requests?
         break;
       case "BridgeRequestWithdrawn":
         break;
@@ -93,7 +100,7 @@ async function processAllPastAndAllNewToBwcRequestEvents(
         throw new Error("Event not recognized!");
     }
 
-    await updateSetOfPendingRequests(bwcEvent, db, provider.network.chainId);
+    await updateSetOfActiveRequests(bwcEvent, db, provider.network.chainId);
   }
 
   // We need to make sure, that we process all of these events in proper order.
@@ -102,18 +109,20 @@ async function processAllPastAndAllNewToBwcRequestEvents(
   let processingOfPastEventsFinished = false;
 
   async function processQueueEvents() {
+    // todo. how do we ensure, that the events in the same block are provided and processed in the correct order?
+    // Before processing this, we need to sort again by blocks and then by transaction index.
+    // Furthermore, we need to then ensure, that multiple events fired in the same transaction are properly handled.
     while (queue.length >= 1) {
       const event = queue[0];
       queue.splice(0, 1);
       console.log(`Processing first queue element of ${queue.length}`);
-      await forEachEvent(event);
+      await forEachEventInOrder(event);
     }
   }
 
   // We want to first start listening to the topic AND THEN get the past events to not miss out
   // and new events when we're processing the past.
   for (const topic of topics) {
-    // todo. how do we ensure, that the events in the same block are provided and processed in the correct order?
     bwc.on(
       topic,
       (
@@ -146,7 +155,7 @@ async function processAllPastAndAllNewToBwcRequestEvents(
   processingOfPastEventsFinished = true;
 }
 
-function updateSetOfPendingRequests(
+function updateSetOfActiveRequests(
   bwcEventObject: BwcEventObject,
   db: BwcDB,
   chainId: number

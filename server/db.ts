@@ -2,12 +2,17 @@ import { BigNumber } from "ethers";
 import { formatUnits } from "ethers/lib/utils";
 import { Database, RunResult } from "sqlite3";
 import { promisify } from "util";
+import { BridgeRequestStructOutput } from "./pre-built/typechain-types/contracts/BridgeWhenCheap";
 
 const dbFile = "data/gas.db";
 
 // a uint256 can have atmost 78 digits in decimal
 const SQL_UINT256_TYPE = "VARCHAR(78)";
 const SQL_ADDRESS_TYPE = "VARCHAR(42)";
+
+export type BridgeRequestEntry = BridgeRequestStructOutput & {
+  requestId: BigNumber;
+};
 
 export interface GasInfo {
   chainId: number;
@@ -59,9 +64,9 @@ export class BwcDB {
 
       await promisify(this.db.run).call(
         this.db,
+        // THIS MUST BE IN SAME ORDER AS IN THE CONTRACT!
         `CREATE TABLE IF NOT EXISTS ${this.activeRequestsTable(chainId)} (
-          requestor ${SQL_ADDRESS_TYPE},
-          requestId INT,
+          source ${SQL_ADDRESS_TYPE},
           destination ${SQL_ADDRESS_TYPE},
           isTokenTransfer INT,
           token ${SQL_ADDRESS_TYPE},
@@ -69,9 +74,17 @@ export class BwcDB {
           amountOutMin ${SQL_UINT256_TYPE},
           wantedL1GasPrice ${SQL_UINT256_TYPE},
           l2execGasFeeDeposit ${SQL_UINT256_TYPE},
-          PRIMARY KEY (requestor, requestId)
+          requestId INT,
+          PRIMARY KEY (source, requestId)
         )`
+        // THIS MUST BE IN SAME ORDER AS IN THE CONTRACT!
         // The requestor x requestId are only sufficient to uniquely determine the request during the current time.
+      );
+
+      // todo. don't clear database every time.
+      await promisify(this.db.run).call(
+        this.db,
+        `DELETE FROM ${this.activeRequestsTable(chainId)}`
       );
     }
 
@@ -111,6 +124,71 @@ export class BwcDB {
         } active requests in ${this.activeRequestsTable(chainId)}`
       );
     }
+  }
+
+  public async getActiveRequest(
+    requestor: string,
+    requestId: BigNumber,
+    chainId: number
+  ): Promise<BridgeRequestEntry | undefined> {
+    console.log(`getActiveRequest(${requestor},${requestId},${chainId})`);
+    const result: BridgeRequestEntry[] = <BridgeRequestEntry[]>(
+      await promisify((cb) =>
+        this.db.all(
+          `SELECT * FROM ${this.activeRequestsTable(
+            chainId
+          )} WHERE source=? AND requestId=?`,
+          requestor,
+          requestId,
+          cb
+        )
+      )()
+    );
+    console.log("result:", result);
+    return result?.[0];
+  }
+
+  public async deleteActiveRequest(
+    requestor: string,
+    requestId: BigNumber,
+    chainId: number
+  ): Promise<void> {
+    console.log(`deleteActiveRequest(${requestor},${requestId},${chainId})`);
+    await promisify((cb) =>
+      this.db.run(
+        `DELETE FROM ${this.activeRequestsTable(
+          chainId
+        )} WHERE source=? AND requestId=?`,
+        requestor,
+        requestId,
+        cb
+      )
+    )();
+  }
+
+  public async addActiveRequest(
+    request: BridgeRequestStructOutput,
+    requestId: BigNumber,
+    chainId: number
+  ): Promise<void> {
+    console.log(`addActiveRequest(${request},${chainId})`);
+    await promisify((cb) =>
+      this.db.run(
+        `INSERT OR REPLACE INTO ${this.activeRequestsTable(
+          chainId
+        )} VALUES (?,?,?,?,?,?,?,?,?)`,
+        request[0],
+        request[1],
+        request[2],
+        request[3],
+        request[4],
+        request[5],
+        request[6],
+        request[7],
+        requestId,
+        cb
+      )
+    )();
   }
 
   public async addBwcUser(userAddr: string, chainId: number) {
