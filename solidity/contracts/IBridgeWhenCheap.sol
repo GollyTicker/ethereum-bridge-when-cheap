@@ -24,22 +24,21 @@ interface IBridgeWhenCheap {
     // See: https://docs.soliditylang.org/en/v0.8.4/abi-spec.html#events
     event BridgeRequested(
         address indexed source,
-        uint256 indexed requestId,
+        uint256 indexed nonce,
         BridgeRequest request
     );
     event BridgeExecutionSubmitted(
         address indexed source,
-        uint256 indexed requestId,
+        uint256 indexed nonce,
         BridgeRequest request
     );
     event BridgeRequestWithdrawn(
         address indexed source,
-        uint256 indexed requestId,
+        uint256 indexed nonce,
         BridgeRequest request
     );
 
     function deposit(
-        uint256 requestId,
         IERC20 tokenOrEtherAddr,
         uint256 tokenAmount,
         address destination,
@@ -47,11 +46,11 @@ interface IBridgeWhenCheap {
         uint256 amountOutMin
     ) external payable;
 
-    function withdraw(uint256 requestId) external;
+    function withdraw(uint256 nonce) external;
 
     function executeRequest(
         address requestor,
-        uint256 requestId,
+        uint256 nonce,
         uint256 bonderFee,
         uint256 destAmmDeadline
     ) external;

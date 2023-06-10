@@ -22,7 +22,7 @@ contract Adversary is ReentrancyExecutor {
     }
 
     function callDepositAndWithdraw() external payable {
-        bwc.deposit{value: 100}(0, IERC20(address(0)), 0, msg.sender, 1, 0);
+        bwc.deposit{value: 100}(IERC20(address(0)), 0, msg.sender, 1, 0);
         bwc.withdraw(0);
     }
 }

@@ -8,7 +8,7 @@ import { LoadingButton } from '@mui/lab'
 type RequestStatus = 'waiting' | 'submitted' | 'aborted' | 'failed'
 
 interface Request {
-  requestId: string
+  nonce: string
   fromChain: string
   receiver: string
   wantedL1GasPrice: BigNumber
@@ -31,7 +31,7 @@ function statusText (status: RequestStatus) {
 export function ViewAndWithdrawDeposits (props: { global: GlobalProps }) {
   const pendingRquests: Request[] = [
     {
-      requestId: '0',
+      nonce: '0',
       amount: parseUnits('100', 'ether'),
       token: 'DAI',
       fromChain: 'arbitrum',
@@ -41,7 +41,7 @@ export function ViewAndWithdrawDeposits (props: { global: GlobalProps }) {
       status: 'waiting'
     },
     {
-      requestId: '3',
+      nonce: '3',
       amount: parseUnits('10', 'ether'),
       token: 'ETH',
       fromChain: 'arbitrum',
@@ -52,7 +52,7 @@ export function ViewAndWithdrawDeposits (props: { global: GlobalProps }) {
       submitTx: '0x12121212347E695d87981aAD388574D54e92Ac71'
     },
     {
-      requestId: '2',
+      nonce: '2',
       amount: parseUnits('1', 'ether'),
       token: 'USDC',
       fromChain: 'arbitrum',
@@ -75,7 +75,7 @@ export function ViewAndWithdrawDeposits (props: { global: GlobalProps }) {
     </Box>
     {pendingRquests.map((request, idx) => {
       return (<Box
-          key={request.requestId}
+          key={request.nonce}
           display="flex"
           alignItems="left"
           marginTop={idx === 0 ? 1 : 2}

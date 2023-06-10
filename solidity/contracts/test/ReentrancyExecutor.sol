@@ -21,7 +21,6 @@ abstract contract ReentrancyExecutor {
             // do nothing
         } else if (reentrancyFunction == ReentrancyFunction.deposit) {
             reentrancyTarget.deposit{value: 0}(
-                0,
                 IERC20(address(0)),
                 0,
                 msg.sender,

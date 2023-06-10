@@ -26,8 +26,13 @@ contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
     uint256 public collectedServiceFeeExcludingGas;
 
     // For each requestor, we store a list of pending requests.
+    // We have requestor x nonce => BridgeRequest. Each nonce will be used exactly once and it'll
+    // increment starting at 0.
     mapping(address => mapping(uint256 => BridgeRequest))
         public pendingRequests;
+
+    // The next, yet unused, nonce for each requestor.
+    mapping(address => uint256) public nextNonceOf;
 
     // destination layer 1 chain id: mainnet = 1, goerli = 5
     uint256 public layer1ChainId;
@@ -75,7 +80,6 @@ contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
     // when the L1 gas fees are at wantedL1GasPrice or lower.
     // The request is recorded in the smart contract and executed lateron by the owner of the contract.
     function deposit(
-        uint256 requestId,
         // if native ETH payment, then token must be 0 address.
         IERC20 tokenOrEtherAddr,
         // if tokenAmount == 0, then a native ETH payment is expected.
@@ -127,15 +131,15 @@ contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
             "Calculated sent amount must be larger than the desired minimum amount arriving at destination."
         );
 
-        require(
-            !isDefined(pendingRequests[msg.sender][requestId]),
-            "Request with the same id for the requestor already exists."
-        );
+        uint256 nonce = nextNonceOf[msg.sender];
+        nextNonceOf[msg.sender]++;
+
+        assert(!isDefined(pendingRequests[msg.sender][nonce]));
 
         // CHANGES
         recordCollectedServiceFeeExcludingGas();
 
-        pendingRequests[msg.sender][requestId] = BridgeRequest({
+        pendingRequests[msg.sender][nonce] = BridgeRequest({
             source: msg.sender,
             destination: destination,
             isTokenTransfer: isTokenTransfer,
@@ -148,8 +152,8 @@ contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
 
         emit BridgeRequested(
             msg.sender,
-            requestId,
-            pendingRequests[msg.sender][requestId]
+            nonce,
+            pendingRequests[msg.sender][nonce]
         );
 
         // INTERACTIONS
@@ -166,11 +170,11 @@ contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
     }
 
     // Cancel any request belonging to the caller and withdraw the funds.
-    function withdraw(uint256 requestId) external nonReentrant {
+    function withdraw(uint256 nonce) external nonReentrant {
         // CHECKS
         // This is a copy, not a reference.
         BridgeRequest memory obsoleteRequest = pendingRequests[msg.sender][
-            requestId
+            nonce
         ];
         require(isDefined(obsoleteRequest), "No request to withdraw.");
         assert(obsoleteRequest.source == msg.sender);
@@ -186,7 +190,7 @@ contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
         }
 
         // CHANGES
-        delete pendingRequests[msg.sender][requestId];
+        delete pendingRequests[msg.sender][nonce];
 
         // INTERACTIONS
         Address.sendValue(payable(msg.sender), withdrawNativeEtherAmount);
@@ -195,7 +199,7 @@ contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
                 obsoleteRequest.token.transfer(msg.sender, withdrawTokenAmount)
             );
         }
-        emit BridgeRequestWithdrawn(msg.sender, requestId, obsoleteRequest);
+        emit BridgeRequestWithdrawn(msg.sender, nonce, obsoleteRequest);
     }
 
     // Execute the request for the given requestor address and request id.
@@ -204,7 +208,7 @@ contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
     // using the HOP v1 SDK.
     function executeRequest(
         address requestor,
-        uint256 requestId,
+        uint256 nonce,
         // bonder fee is calculated via Hop SDK v1 "populateSendTx" just before initiating this tx.
         // We only need the bonder fee and we only have limited
         // room there, as the minimum amoutOut has already been promised to the user.
@@ -213,7 +217,7 @@ contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
     ) external nonReentrant onlyOwner {
         // CHECKS
         BridgeRequest memory toBeBridgedRequest = pendingRequests[requestor][
-            requestId
+            nonce
         ];
         require(isDefined(toBeBridgedRequest), "No request to process");
         require(
@@ -232,7 +236,7 @@ contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
         address bridgeContract = bridgeContractOf[toBeBridgedRequest.token];
 
         // CHANGES
-        delete pendingRequests[requestor][requestId];
+        delete pendingRequests[requestor][nonce];
 
         // INTERACTIONS
         HopL2AmmWrapper(bridgeContract).swapAndSend{value: nativeEtherSent}(
@@ -251,7 +255,7 @@ contract BridgeWhenCheap is IBridgeWhenCheap, Ownable, ReentrancyGuard {
             toBeBridgedRequest.l2execGasFeeDeposit
         );
 
-        emit BridgeExecutionSubmitted(requestor, requestId, toBeBridgedRequest);
+        emit BridgeExecutionSubmitted(requestor, nonce, toBeBridgedRequest);
     }
 
     // ====================== OWNER MANAGEMENT FUNCTIONS
